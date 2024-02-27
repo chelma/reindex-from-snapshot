@@ -4,7 +4,7 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.store.FSDirectory;
-
+import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.index.mapper.Uid;
 
 import java.nio.file.Paths;
@@ -36,25 +36,29 @@ public class LuceneDocumentReader {
             // Iterating over all documents in the index
             for (int i = 0; i < reader.maxDoc(); i++) {
                 System.out.println("Reading Document");
+                Document document = reader.document(i);
 
-                if (!reader.hasDeletions()) { // Skip deleted documents
-                    Document document = reader.document(i);
+                BytesRef source_bytes = document.getBinaryValue("_source");
+                if (source_bytes == null || source_bytes.bytes.length == 0) { // Skip deleted documents
+                    String id = Uid.decodeId(reader.document(i).getBinaryValue("_id").bytes);
+                    System.out.println("Document " + id + " is deleted");
+                    continue;
+                }              
 
-                    // Iterate over all fields in the document
-                    List<org.apache.lucene.index.IndexableField> fields = document.getFields();
-                    for (org.apache.lucene.index.IndexableField field : fields) {
-                        if ("_source".equals(field.name())){
-                            String source = document.getBinaryValue(field.name()).utf8ToString();
-                            System.out.println("Field name: " + field.name() + ", Field value: " + source);
-                        } else if ("_id".equals(field.name())){
-                            String uid = Uid.decodeId(document.getBinaryValue(field.name()).bytes);
-                            System.out.println("Field name: " + field.name() + ", Field value: " + uid);
-                        } else {
-                            System.out.println("Field name: " + field.name());
-                        }
+                // Iterate over all fields in the document
+                List<org.apache.lucene.index.IndexableField> fields = document.getFields();
+                for (org.apache.lucene.index.IndexableField field : fields) {
+                    if ("_source".equals(field.name())){
+                        String source_string = source_bytes.utf8ToString();
+                        System.out.println("Field name: " + field.name() + ", Field value: " + source_string);
+                    } else if ("_id".equals(field.name())){
+                        String uid = Uid.decodeId(document.getBinaryValue(field.name()).bytes);
+                        System.out.println("Field name: " + field.name() + ", Field value: " + uid);
+                    } else {
+                        System.out.println("Field name: " + field.name());
                     }
-                    System.out.println("--------------------------------");
                 }
+                System.out.println("--------------------------------");
             }
         }
     }
