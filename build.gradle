@@ -3,6 +3,9 @@ plugins {
     id 'java'
 }
 
+sourceCompatibility = '11'
+targetCompatibility = '11'
+
 repositories {
     mavenCentral()
 }
@@ -10,8 +13,9 @@ repositories {
 dependencies {
     implementation 'org.apache.lucene:lucene-core:8.7.0'
     implementation 'org.apache.lucene:lucene-analyzers-common:8.7.0'
+    implementation 'org.elasticsearch:elasticsearch:7.10.2'
 }
 
 application {
-    mainClassName = 'main.java.com.rfs.LuceneDocumentReader'
+    mainClassName = 'com.rfs.LuceneDocumentReader'
 }
