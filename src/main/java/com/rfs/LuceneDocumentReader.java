@@ -1,14 +1,25 @@
 package com.rfs;
 
+import java.nio.file.Paths;
+import java.nio.file.Path;
+import java.util.List;
+
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
-import org.elasticsearch.index.mapper.Uid;
 
-import java.nio.file.Paths;
-import java.util.List;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+
+
+import org.elasticsearch.common.blobstore.BlobPath;
+import org.elasticsearch.common.blobstore.BlobContainer;
+import org.elasticsearch.common.blobstore.fs.FsBlobStore;
+import org.elasticsearch.index.mapper.Uid;
+import org.elasticsearch.repositories.blobstore.ChecksumBlobStoreFormat;
+import org.elasticsearch.snapshots.SnapshotId;
+import org.elasticsearch.snapshots.SnapshotInfo;;
 
 public class LuceneDocumentReader {
 
@@ -17,18 +28,54 @@ public class LuceneDocumentReader {
     }
 
     public static void main(String[] args) {
-        // Replace this with the path to your Lucene index directory
-        String indexDirectoryPath = "/tmp/data/nodes/0/indices/qS8W6q9JTVuWiuQeJrPfbQ/0/index";
+        // Paths
+        String snapshotDirectoryPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/repo/snapshots";
+        SnapshotId snapshotId = new SnapshotId("my_snapshot", "Q-cTkU6-R2ijMoEAwBCouQ");
+        String indexDirectoryPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/data/nodes/0/indices/yflN6Nk6TVioQccGgHU1UQ/0/index";
 
         try {
-            System.out.println("Starting reads...");
-            readDocumentsFromIndex(indexDirectoryPath);
+            System.out.println("Attempting to read Snapshot details...");
+            readSnapshotDetails(snapshotDirectoryPath, snapshotId);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        try {
+            System.out.println("Starting document reads...");
+            readDocumentsFromLuceneIndex(indexDirectoryPath);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static void readDocumentsFromIndex(String indexDirectoryPath) throws Exception {
+    private static void readSnapshotDetails(String snapshotDirectoryPath, SnapshotId snapshotId) throws Exception {
+        Path snapshotPath = Paths.get(snapshotDirectoryPath);
+        BlobPath blobPath = new BlobPath();
+        blobPath.add(snapshotDirectoryPath);
+
+        FsBlobStore blobStore = new FsBlobStore(
+            131072, // Magic number pulled from running ES process
+            snapshotPath, 
+            false
+        );
+        BlobContainer container = blobStore.blobContainer(blobPath);
+
+        ChecksumBlobStoreFormat<SnapshotInfo> snapshotFormat =
+            new ChecksumBlobStoreFormat<>("snapshot", "snap-%s.dat", SnapshotInfo::fromXContentInternal);
+
+        // Make an empty registry; may not work for all cases?
+        List<NamedXContentRegistry.Entry> entries = List.of();
+        NamedXContentRegistry registry = new NamedXContentRegistry(entries);
+
+        // Read the snapshot details
+        SnapshotInfo snapshotInfo = snapshotFormat.read(container, snapshotId.getUUID(), registry);
+
+        System.out.println("Snapshot details: " + snapshotInfo.toString());
+
+        blobStore.close();
+    }
+
+    private static void readDocumentsFromLuceneIndex(String indexDirectoryPath) throws Exception {
         // Opening the directory that contains the Lucene index
         try (FSDirectory directory = FSDirectory.open(Paths.get(indexDirectoryPath));
              IndexReader reader = DirectoryReader.open(directory)) {
