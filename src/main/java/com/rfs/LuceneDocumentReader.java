@@ -19,7 +19,9 @@ import org.elasticsearch.common.blobstore.BlobPath;
 import org.elasticsearch.common.blobstore.BlobContainer;
 import org.elasticsearch.common.blobstore.fs.FsBlobStore;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
-import org.elasticsearch.index.mapper.Uid;
+import org.elasticsearch.index.shard.ShardId;
+import org.elasticsearch.index.snapshots.blobstore.BlobStoreIndexShardSnapshot;
+import org.elasticsearch.index.snapshots.blobstore.SnapshotFiles;
 import org.elasticsearch.repositories.blobstore.ChecksumBlobStoreFormat;
 import org.elasticsearch.repositories.IndexId;
 import org.elasticsearch.snapshots.SnapshotId;
@@ -37,7 +39,7 @@ public class LuceneDocumentReader {
         // Paths
         String snapshotName = "my_snapshot";
         String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/repo/snapshots";
-        String repoDataFileName = "index-2";
+        String repoDataFileName = "index-0";
         // String luceneIndexDirectoryPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/data/nodes/0/indices/yflN6Nk6TVioQccGgHU1UQ/0/index";
 
         try {
@@ -73,14 +75,13 @@ public class LuceneDocumentReader {
             System.out.println("Snapshot details: " + snapshotInfo.toString());
 
             // ==========================================================================================================
-            // Read the all the Index Metadata
+            // Read all the Index Metadata
             // ==========================================================================================================
             System.out.println("==================================================================");
             System.out.println("Attempting to read Index Metadata...");
             for (String indexName : data.indices.keySet()) {
                 System.out.println("Reading Index Metadata for index: " + indexName);
                 RepoData.Index index = data.indices.get(indexName);
-                IndexId indexId = new IndexId(indexName, index.id);
                 String snapshotIndexDirPath = snapshotDirPath + "/indices/" + index.id;
                 
                 String indexMetadataKey = mySnapshot.indexMetadataLookup.get(index.id);
@@ -91,6 +92,31 @@ public class LuceneDocumentReader {
                 System.out.println("Index Number of Shards: " + indexMetadata.getNumberOfShards());
                 System.out.println("Index Settings: " + indexMetadata.getSettings().toString());
                 System.out.println("Index Mappings: " + indexMetadata.mapping().source().toString());
+            }
+
+            // ==========================================================================================================
+            // Read all the Index Shard Metadata
+            // ==========================================================================================================
+            System.out.println("==================================================================");
+            System.out.println("Attempting to read Index Shard Metadata...");
+            for (String indexName : data.indices.keySet()) {
+                RepoData.Index index = data.indices.get(indexName);
+                System.out.println("Reading Index Shard Metadata for index: " + indexName + "/" + index.id);
+                String snapshotIndexDirPath = snapshotDirPath + "/indices/" + index.id;
+                
+                String indexMetadataKey = mySnapshot.indexMetadataLookup.get(index.id);
+                String indexMetadataId = data.indexMetadataIdentifiers.get(indexMetadataKey);
+
+                IndexMetadata indexMetadata = readIndexMetadata(snapshotDirPath, snapshotIndexDirPath, indexMetadataId);
+                for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
+                    System.out.println("Shard ID: " + shardId);
+                    String snapshotIndexShardDirPath = snapshotDirPath + "/indices/" + index.id + "/" + shardId;
+                    BlobStoreIndexShardSnapshot shardSnapshot = readIndexShardMetadata(snapshotDirPath, snapshotIndexShardDirPath, snapshotId);
+                    SnapshotFiles snapshotFiles = new SnapshotFiles(shardSnapshot.snapshot(), shardSnapshot.indexFiles(), null);
+                    for (BlobStoreIndexShardSnapshot.FileInfo fileInfo : snapshotFiles.indexFiles()) {
+                        System.out.println("File Info: " + fileInfo.toString());
+                    }
+                }
             }
 
             // System.out.println("Starting document reads...");
@@ -157,6 +183,31 @@ public class LuceneDocumentReader {
         blobStore.close();
 
         return indexMetadata;
+    }
+
+    private static BlobStoreIndexShardSnapshot readIndexShardMetadata(String snapshotDirPath, String snapshotIndexShardDirPath, SnapshotId snapshotId) throws Exception {
+        Path snapshotPath = Paths.get(snapshotDirPath);
+        BlobPath blobPath = new BlobPath().add(snapshotIndexShardDirPath);
+
+        FsBlobStore blobStore = new FsBlobStore(
+            131072, // Magic number pulled from running ES process
+            snapshotPath, 
+            false
+        );
+        BlobContainer container = blobStore.blobContainer(blobPath);
+
+        ChecksumBlobStoreFormat<BlobStoreIndexShardSnapshot> indexShardSnapshotFormat =
+            new ChecksumBlobStoreFormat<>("snapshot", "snap-%s.dat", BlobStoreIndexShardSnapshot::fromXContent);
+
+        // Make an empty registry; may not work for all cases?
+        List<NamedXContentRegistry.Entry> entries = List.of();
+        NamedXContentRegistry registry = new NamedXContentRegistry(entries);
+
+        BlobStoreIndexShardSnapshot shardSnapshot = indexShardSnapshotFormat.read(container, snapshotId.getUUID(), registry);
+
+        blobStore.close();
+
+        return shardSnapshot;
     }
 
     // private static void readDocumentsFromLuceneIndex(String indexDirectoryPath) throws Exception {
