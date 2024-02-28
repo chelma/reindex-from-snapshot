@@ -14,10 +14,13 @@ import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 
 
 import org.elasticsearch.common.blobstore.BlobPath;
+import org.elasticsearch.cluster.metadata.IndexMetadata;
 import org.elasticsearch.common.blobstore.BlobContainer;
 import org.elasticsearch.common.blobstore.fs.FsBlobStore;
 import org.elasticsearch.index.mapper.Uid;
 import org.elasticsearch.repositories.blobstore.ChecksumBlobStoreFormat;
+import org.elasticsearch.repositories.IndexId;
+
 import org.elasticsearch.snapshots.SnapshotId;
 import org.elasticsearch.snapshots.SnapshotInfo;;
 
@@ -29,29 +32,38 @@ public class LuceneDocumentReader {
 
     public static void main(String[] args) {
         // Paths
-        String snapshotDirectoryPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/repo/snapshots";
-        SnapshotId snapshotId = new SnapshotId("my_snapshot", "Q-cTkU6-R2ijMoEAwBCouQ");
-        String indexDirectoryPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/data/nodes/0/indices/yflN6Nk6TVioQccGgHU1UQ/0/index";
+        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/repo/snapshots";
+        String snapshotIndexDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/repo/snapshots/indices/Nc76Zy8nSV6ZcKOI41zJlw";
+        String luceneIndexDirectoryPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/data/nodes/0/indices/yflN6Nk6TVioQccGgHU1UQ/0/index";
 
         try {
             System.out.println("Attempting to read Snapshot details...");
-            readSnapshotDetails(snapshotDirectoryPath, snapshotId);
+            SnapshotId snapshotId = new SnapshotId("my_snapshot", "Q-cTkU6-R2ijMoEAwBCouQ");
+            readSnapshotDetails(snapshotDirPath, snapshotId);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        try {
+            System.out.println("Attempting to read Index Metadata...");
+            IndexId indexId = new IndexId("index_1", "Nc76Zy8nSV6ZcKOI41zJlw");
+            readIndexMetadata(snapshotDirPath, snapshotIndexDirPath, indexId);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         try {
             System.out.println("Starting document reads...");
-            readDocumentsFromLuceneIndex(indexDirectoryPath);
+            readDocumentsFromLuceneIndex(luceneIndexDirectoryPath);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static void readSnapshotDetails(String snapshotDirectoryPath, SnapshotId snapshotId) throws Exception {
-        Path snapshotPath = Paths.get(snapshotDirectoryPath);
+    private static void readSnapshotDetails(String snapshotDirPath, SnapshotId snapshotId) throws Exception {
+        Path snapshotPath = Paths.get(snapshotDirPath);
         BlobPath blobPath = new BlobPath();
-        blobPath.add(snapshotDirectoryPath);
+        blobPath.add(snapshotDirPath);
 
         FsBlobStore blobStore = new FsBlobStore(
             131072, // Magic number pulled from running ES process
@@ -71,6 +83,33 @@ public class LuceneDocumentReader {
         SnapshotInfo snapshotInfo = snapshotFormat.read(container, snapshotId.getUUID(), registry);
 
         System.out.println("Snapshot details: " + snapshotInfo.toString());
+
+        blobStore.close();
+    }
+
+    private static void readIndexMetadata(String snapshotDirPath, String snapshotIndexDirPath, IndexId indexId) throws Exception {
+        Path snapshotPath = Paths.get(snapshotDirPath);
+        BlobPath blobPath = new BlobPath().add(snapshotIndexDirPath);
+
+        FsBlobStore blobStore = new FsBlobStore(
+            131072, // Magic number pulled from running ES process
+            snapshotPath, 
+            false
+        );
+        BlobContainer container = blobStore.blobContainer(blobPath);
+
+        ChecksumBlobStoreFormat<IndexMetadata> indexMetadataFormat =
+            new ChecksumBlobStoreFormat<>("index-metadata", "meta-%s.dat", IndexMetadata::fromXContent);
+
+        // Make an empty registry; may not work for all cases?
+        List<NamedXContentRegistry.Entry> entries = List.of();
+        NamedXContentRegistry registry = new NamedXContentRegistry(entries);
+        
+        IndexMetadata indexMetadata = indexMetadataFormat.read(container, "1GB_8I0BbDG2Eky4IlTa", registry);
+
+        System.out.println("Index Number of Shards: " + indexMetadata.getNumberOfShards());
+        System.out.println("Index Settings: " + indexMetadata.getSettings().toString());
+        System.out.println("Index Mappings: " + indexMetadata.mapping().source().toString());
 
         blobStore.close();
     }
