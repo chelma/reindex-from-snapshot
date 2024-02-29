@@ -22,5 +22,5 @@ dependencies {
 }
 
 application {
-    mainClassName = 'com.rfs.LuceneDocumentReader'
+    mainClassName = 'com.rfs.PrintOutDemo'
 }
