@@ -6,7 +6,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
@@ -45,9 +48,6 @@ public class DemoPrintOutSnapshot {
 
     public static void main(String[] args) {
         // Constants
-        int bufferSizeInBytes = 131072; // Magic number pulled from running ES process
-
-        // Paths
         String snapshotName = "global_state_snapshot";
         String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/repo/snapshots";        
         String luceneFilesBasePath = "/tmp/lucene_files";
@@ -77,9 +77,13 @@ public class DemoPrintOutSnapshot {
                 System.out.println("Snapshot not found");
                 return;
             }
-            SnapshotId snapshotId = new SnapshotId(snapshotName, snapshotIdString);
-            SnapshotInfo snapshotInfo = readSnapshotDetails(snapshotDirPath, snapshotId);
-            System.out.println("Snapshot details: " + snapshotInfo.toString());
+            SnapshotMetadataProvider snapshotMetadataProvider = SnapshotMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            System.out.println("Snapshot State: " + snapshotMetadataProvider.getState());
+            System.out.println("Snapshot State Reason: " + snapshotMetadataProvider.getReason());
+            System.out.println("Snapshot Indices: " + snapshotMetadataProvider.getIndices());
+            System.out.println("Snapshot Shards Total: " + snapshotMetadataProvider.getShardsTotal());
+            System.out.println("Snapshot Shards Successful: " + snapshotMetadataProvider.getShardsSuccessful());
+            System.out.println("Snapshot Shards Failed: " + snapshotMetadataProvider.getShardsFailed());
 
             // ==========================================================================================================
             // Read the Global Metadata
@@ -90,55 +94,58 @@ public class DemoPrintOutSnapshot {
 
             GlobalMetadataProvider globalMetadataProvider = GlobalMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
 
-            Metadata globalMetadata = readGlobalMetadata(snapshotDirPath, snapshotId);
-            // System.out.println("Global Component Templates: " + globalMetadataProvider.getComponentTemplates().toPrettyString());
-            System.out.println("Global Index Templates: " + globalMetadataProvider.getIndexTemplates().toPrettyString());
+            List<String> componentKeys = new ArrayList<>();
+            globalMetadataProvider.getComponentTemplates().fieldNames().forEachRemaining(componentKeys::add);
+            System.out.println("Global Component Templates Keys: " + componentKeys);
+
+            List<String> indexKeys = new ArrayList<>();
+            globalMetadataProvider.getIndexTemplates().fieldNames().forEachRemaining(indexKeys::add);
+            System.out.println("Global Index Templates Keys: " + indexKeys);
 
             // ==========================================================================================================
             // Read all the Index Metadata
             // ==========================================================================================================
             System.out.println("==================================================================");
             System.out.println("Attempting to read Index Metadata...");
+            Map<String, IndexMetadataProvider> indexMetadatas = new HashMap<>();
             for (SnapshotRepoData.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
                 System.out.println("Reading Index Metadata for index: " + index.name);
-                String snapshotIndexDirPath = snapshotDirPath + "/indices/" + index.id;
-                
-                String indexMetadataId = repoDataProvider.getIndexMetadataId(snapshotName, index.name);
+                IndexMetadataProvider indexMetadataProvider = IndexMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.name);
+                indexMetadatas.put(index.name, indexMetadataProvider);
 
-                IndexMetadata indexMetadata = readIndexMetadata(snapshotDirPath, snapshotIndexDirPath, indexMetadataId);
-                System.out.println("Index Id: " + indexMetadata.getIndex().getUUID());
-                System.out.println("Index Number of Shards: " + indexMetadata.getNumberOfShards());
-                System.out.println("Index Settings: " + indexMetadata.getSettings().toDelimitedString(','));
-                System.out.println("Index Mappings: " + indexMetadata.mapping().source().toString());
-                System.out.println("Index Aliases: " + indexMetadata.getAliases().toString());
-
-                // ConnectionDetails connectionDetails = new ConnectionDetails("localhost", 9200, "elastic-admin", "elastic-password");
-                // IndexCreator.createIndex(index.name + "_reindexed", indexMetadata, connectionDetails);
+                System.out.println("Index Id: " + indexMetadataProvider.getId());
+                System.out.println("Index Number of Shards: " + indexMetadataProvider.getNumberOfShards());
+                System.out.println("Index Settings: " + indexMetadataProvider.getSettingsJson().toString());
+                System.out.println("Index Mappings: " + indexMetadataProvider.getMappingsJson().toString());
+                System.out.println("Index Aliases: " + indexMetadataProvider.getAliasesJson().toString());
             }
+            System.out.println("Index Metadata read successfully");
 
             // ==========================================================================================================
-            // Read all the Index Shard Metadata
+            // Read the Index Shard Metadata for the Snapshot
             // ==========================================================================================================
-            System.out.println("==================================================================");
-            System.out.println("Attempting to read Index Shard Metadata...");
+            // System.out.println("==================================================================");
+            // System.out.println("Attempting to read Index Shard Metadata...");
 
-            for (SnapshotRepoData.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
-                System.out.println("Reading Index Shard Metadata for index: " + index.name);
-                String snapshotIndexDirPath = snapshotDirPath + "/indices/" + index.id;
-                
-                String indexMetadataId = repoDataProvider.getIndexMetadataId(snapshotName, index.name);
+            // List<IndexMetadataProvider> filteredIndexMetadatas = new ArrayList<>();
+            // repoDataProvider.getIndicesInSnapshot(snapshotName).forEach(index -> {
+            //     filteredIndexMetadatas.add(indexMetadatas.get(index.name));
+            // });
 
-                IndexMetadata indexMetadata = readIndexMetadata(snapshotDirPath, snapshotIndexDirPath, indexMetadataId);
-                for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-                    System.out.println("Shard ID: " + shardId);
-                    String snapshotIndexShardDirPath = snapshotDirPath + "/indices/" + index.id + "/" + shardId;
-                    BlobStoreIndexShardSnapshot shardSnapshot = readIndexShardMetadata(snapshotDirPath, snapshotIndexShardDirPath, snapshotId);
-                    SnapshotFiles snapshotFiles = new SnapshotFiles(shardSnapshot.snapshot(), shardSnapshot.indexFiles(), null);
-                    for (BlobStoreIndexShardSnapshot.FileInfo fileInfo : snapshotFiles.indexFiles()) {
-                        System.out.println("File Info: " + fileInfo.toString());
-                    }
-                }
-            }
+            // for (IndexMetadataProvider indexMetadata : filteredIndexMetadatas) {
+            //     System.out.println("Reading Index Shard Metadata for index: " + indexMetadata.getName());
+            //     for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
+            //         System.out.println("=== Shard ID: " + shardId + " ===");
+
+            //         // Get the file mapping for the shard
+            //         String snapshotIndexShardDirPath = snapshotDirPath + "/indices/" + indexMetadata.getId() + "/" + shardId;
+            //         BlobStoreIndexShardSnapshot shardSnapshot = readIndexShardMetadata(snapshotDirPath, snapshotIndexShardDirPath, snapshotId);
+            //         SnapshotFiles snapshotFiles = new SnapshotFiles(shardSnapshot.snapshot(), shardSnapshot.indexFiles(), null);
+            //         for (BlobStoreIndexShardSnapshot.FileInfo fileInfo : snapshotFiles.indexFiles()) {
+            //             System.out.println("File Info: " + fileInfo.toString());
+            //         }
+            //     }
+            // }
 
             // ==========================================================================================================
             // Unpack the blob files
@@ -211,107 +218,12 @@ public class DemoPrintOutSnapshot {
         }
     }
 
-    private static Metadata readGlobalMetadata(String snapshotDirPath, SnapshotId snapshotId) throws Exception {
-        Path snapshotPath = Paths.get(snapshotDirPath);
-        BlobPath blobPath = new BlobPath();
-        blobPath.add(snapshotDirPath);
-
-        FsBlobStore blobStore = new FsBlobStore(
-            131072, // Magic number pulled from running ES process
-            snapshotPath, 
-            false
-        );
-        BlobContainer container = blobStore.blobContainer(blobPath);
-
-        ChecksumBlobStoreFormat<Metadata> global_metadata_format =
-            new ChecksumBlobStoreFormat<>("metadata", "meta-%s.dat", Metadata::fromXContent);
-
-        // Pulled from https://github.com/elastic/elasticsearch/blob/v7.10.2/server/src/main/java/org/elasticsearch/cluster/ClusterModule.java#L180
-        List<NamedXContentRegistry.Entry> entries = new ArrayList<>();
-        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(RepositoriesMetadata.TYPE),
-            RepositoriesMetadata::fromXContent));
-        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(IngestMetadata.TYPE),
-            IngestMetadata::fromXContent));
-        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(ScriptMetadata.TYPE),
-            ScriptMetadata::fromXContent));
-        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(IndexGraveyard.TYPE),
-            IndexGraveyard::fromXContent));
-        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(PersistentTasksCustomMetadata.TYPE),
-            PersistentTasksCustomMetadata::fromXContent));
-        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(ComponentTemplateMetadata.TYPE),
-            ComponentTemplateMetadata::fromXContent));
-        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(ComposableIndexTemplateMetadata.TYPE),
-            ComposableIndexTemplateMetadata::fromXContent));
-        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(DataStreamMetadata.TYPE),
-            DataStreamMetadata::fromXContent));
-        NamedXContentRegistry registry = new NamedXContentRegistry(entries);
-
-        // Read the snapshot details
-        Metadata globalMetadata = global_metadata_format.read(container, snapshotId.getUUID(), registry);
-
-        blobStore.close();
-
-        return globalMetadata;
-    }
-
-    private static SnapshotInfo readSnapshotDetails(String snapshotDirPath, SnapshotId snapshotId) throws Exception {
-        Path snapshotPath = Paths.get(snapshotDirPath);
-        BlobPath blobPath = new BlobPath();
-        blobPath.add(snapshotDirPath);
-
-        FsBlobStore blobStore = new FsBlobStore(
-            131072, // Magic number pulled from running ES process
-            snapshotPath, 
-            false
-        );
-        BlobContainer container = blobStore.blobContainer(blobPath);
-
-        ChecksumBlobStoreFormat<SnapshotInfo> snapshotFormat =
-            new ChecksumBlobStoreFormat<>("snapshot", "snap-%s.dat", SnapshotInfo::fromXContentInternal);
-
-        // Make an empty registry; may not work for all cases?
-        List<NamedXContentRegistry.Entry> entries = List.of();
-        NamedXContentRegistry registry = new NamedXContentRegistry(entries);
-
-        // Read the snapshot details
-        SnapshotInfo snapshotInfo = snapshotFormat.read(container, snapshotId.getUUID(), registry);
-
-        blobStore.close();
-
-        return snapshotInfo;
-    }
-
-    private static IndexMetadata readIndexMetadata(String snapshotDirPath, String snapshotIndexDirPath, String indexMetadataId) throws Exception {
-        Path snapshotPath = Paths.get(snapshotDirPath);
-        BlobPath blobPath = new BlobPath().add(snapshotIndexDirPath);
-
-        FsBlobStore blobStore = new FsBlobStore(
-            131072, // Magic number pulled from running ES process
-            snapshotPath, 
-            false
-        );
-        BlobContainer container = blobStore.blobContainer(blobPath);
-
-        ChecksumBlobStoreFormat<IndexMetadata> indexMetadataFormat =
-            new ChecksumBlobStoreFormat<>("index-metadata", "meta-%s.dat", IndexMetadata::fromXContent);
-
-        // Make an empty registry; may not work for all cases?
-        List<NamedXContentRegistry.Entry> entries = List.of();
-        NamedXContentRegistry registry = new NamedXContentRegistry(entries);
-        
-        IndexMetadata indexMetadata = indexMetadataFormat.read(container, indexMetadataId, registry);
-
-        blobStore.close();
-
-        return indexMetadata;
-    }
-
     private static BlobStoreIndexShardSnapshot readIndexShardMetadata(String snapshotDirPath, String snapshotIndexShardDirPath, SnapshotId snapshotId) throws Exception {
         Path snapshotPath = Paths.get(snapshotDirPath);
         BlobPath blobPath = new BlobPath().add(snapshotIndexShardDirPath);
 
         FsBlobStore blobStore = new FsBlobStore(
-            131072, // Magic number pulled from running ES process
+            ElasticsearchConstants.BUFFER_SIZE_IN_BYTES, // Magic number pulled from running ES process
             snapshotPath, 
             false
         );
@@ -320,11 +232,7 @@ public class DemoPrintOutSnapshot {
         ChecksumBlobStoreFormat<BlobStoreIndexShardSnapshot> indexShardSnapshotFormat =
             new ChecksumBlobStoreFormat<>("snapshot", "snap-%s.dat", BlobStoreIndexShardSnapshot::fromXContent);
 
-        // Make an empty registry; may not work for all cases?
-        List<NamedXContentRegistry.Entry> entries = List.of();
-        NamedXContentRegistry registry = new NamedXContentRegistry(entries);
-
-        BlobStoreIndexShardSnapshot shardSnapshot = indexShardSnapshotFormat.read(container, snapshotId.getUUID(), registry);
+        BlobStoreIndexShardSnapshot shardSnapshot = indexShardSnapshotFormat.read(container, snapshotId.getUUID(), ElasticsearchConstants.EMPTY_REGISTRY);
 
         blobStore.close();
 
