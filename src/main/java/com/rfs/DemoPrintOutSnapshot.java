@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.lucene.document.Document;
@@ -15,9 +16,15 @@ import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.NativeFSLockFactory;
 import org.apache.lucene.util.BytesRef;
-
+import org.elasticsearch.cluster.metadata.ComponentTemplateMetadata;
+import org.elasticsearch.cluster.metadata.ComposableIndexTemplateMetadata;
+import org.elasticsearch.cluster.metadata.DataStreamMetadata;
+import org.elasticsearch.cluster.metadata.IndexGraveyard;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
+import org.elasticsearch.cluster.metadata.Metadata;
+import org.elasticsearch.cluster.metadata.RepositoriesMetadata;
 import org.elasticsearch.common.blobstore.BlobPath;
+import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.blobstore.BlobContainer;
 import org.elasticsearch.common.blobstore.fs.FsBlobStore;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
@@ -25,17 +32,19 @@ import org.elasticsearch.index.mapper.Uid;
 import org.elasticsearch.index.snapshots.blobstore.BlobStoreIndexShardSnapshot;
 import org.elasticsearch.index.snapshots.blobstore.SlicedInputStream;
 import org.elasticsearch.index.snapshots.blobstore.SnapshotFiles;
+import org.elasticsearch.ingest.IngestMetadata;
+import org.elasticsearch.persistent.PersistentTasksCustomMetadata;
 import org.elasticsearch.repositories.blobstore.ChecksumBlobStoreFormat;
+import org.elasticsearch.script.ScriptMetadata;
 import org.elasticsearch.snapshots.SnapshotId;
 import org.elasticsearch.snapshots.SnapshotInfo;
 
-public class PrintOutDemo {
+public class DemoPrintOutSnapshot {
 
-    public PrintOutDemo() {}
+    public DemoPrintOutSnapshot() {}
 
     public static void main(String[] args) {
         // Constants
-        String repoDataFileName = "index-8"; // Changes when the snapshot repo changes, unsafe to hardcode
         int bufferSizeInBytes = 131072; // Magic number pulled from running ES process
 
         // Paths
@@ -49,8 +58,7 @@ public class PrintOutDemo {
             // ==========================================================================================================
             System.out.println("==================================================================");
             System.out.println("Attempting to read Repo data file...");
-            String repoDataFilePath = snapshotDirPath + "/" + repoDataFileName;
-            SnapshotRepoDataProvider repoDataProvider = new SnapshotRepoDataProvider(repoDataFilePath);
+            SnapshotRepoDataProvider repoDataProvider = new SnapshotRepoDataProvider(Paths.get(snapshotDirPath));
             System.out.println("Snapshots: ");
             repoDataProvider.getSnapshots().forEach(snapshot -> System.out.println(snapshot.name + " - " + snapshot.uuid));
 
@@ -74,6 +82,19 @@ public class PrintOutDemo {
             System.out.println("Snapshot details: " + snapshotInfo.toString());
 
             // ==========================================================================================================
+            // Read the Global Metadata
+            // ==========================================================================================================
+            System.out.println("==================================================================");
+            System.out.println("Attempting to read Global Metadata details...");
+
+
+            GlobalMetadataProvider globalMetadataProvider = GlobalMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+
+            Metadata globalMetadata = readGlobalMetadata(snapshotDirPath, snapshotId);
+            // System.out.println("Global Component Templates: " + globalMetadataProvider.getComponentTemplates().toPrettyString());
+            System.out.println("Global Index Templates: " + globalMetadataProvider.getIndexTemplates().toPrettyString());
+
+            // ==========================================================================================================
             // Read all the Index Metadata
             // ==========================================================================================================
             System.out.println("==================================================================");
@@ -90,11 +111,9 @@ public class PrintOutDemo {
                 System.out.println("Index Settings: " + indexMetadata.getSettings().toDelimitedString(','));
                 System.out.println("Index Mappings: " + indexMetadata.mapping().source().toString());
                 System.out.println("Index Aliases: " + indexMetadata.getAliases().toString());
-                System.out.println(indexMetadata.getAliases().keys());
-                System.out.println(indexMetadata.getAliases().values());
 
-                ConnectionDetails connectionDetails = new ConnectionDetails("localhost", 9200, "elastic-admin", "elastic-password");
-                IndexCreator.createIndex(index.name + "_reindexed", indexMetadata, connectionDetails);
+                // ConnectionDetails connectionDetails = new ConnectionDetails("localhost", 9200, "elastic-admin", "elastic-password");
+                // IndexCreator.createIndex(index.name + "_reindexed", indexMetadata, connectionDetails);
             }
 
             // ==========================================================================================================
@@ -124,72 +143,115 @@ public class PrintOutDemo {
             // ==========================================================================================================
             // Unpack the blob files
             // ==========================================================================================================
-            System.out.println("==================================================================");
-            System.out.println("Unpacking blob files to disk...");
+            // System.out.println("==================================================================");
+            // System.out.println("Unpacking blob files to disk...");
 
-            NativeFSLockFactory lockFactory = NativeFSLockFactory.INSTANCE;
+            // NativeFSLockFactory lockFactory = NativeFSLockFactory.INSTANCE;
 
-            for (SnapshotRepoData.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
-                String snapshotIndexDirPath = snapshotDirPath + "/indices/" + index.id;
+            // for (SnapshotRepoData.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
+            //     String snapshotIndexDirPath = snapshotDirPath + "/indices/" + index.id;
                 
-                String indexMetadataId = repoDataProvider.getIndexMetadataId(snapshotName, index.name);
+            //     String indexMetadataId = repoDataProvider.getIndexMetadataId(snapshotName, index.name);
 
-                IndexMetadata indexMetadata = readIndexMetadata(snapshotDirPath, snapshotIndexDirPath, indexMetadataId);
-                for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-                    System.out.println("=== Index: " + index.id + " Shard ID: " + shardId + " ===");
+            //     IndexMetadata indexMetadata = readIndexMetadata(snapshotDirPath, snapshotIndexDirPath, indexMetadataId);
+            //     for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
+            //         System.out.println("=== Index: " + index.id + " Shard ID: " + shardId + " ===");
 
-                    // Get the file mapping for the shard
-                    String snapshotIndexShardDirPath = snapshotDirPath + "/indices/" + index.id + "/" + shardId;
-                    BlobStoreIndexShardSnapshot shardSnapshot = readIndexShardMetadata(snapshotDirPath, snapshotIndexShardDirPath, snapshotId);
-                    SnapshotFiles snapshotFiles = new SnapshotFiles(shardSnapshot.snapshot(), shardSnapshot.indexFiles(), null);
+            //         // Get the file mapping for the shard
+            //         String snapshotIndexShardDirPath = snapshotDirPath + "/indices/" + index.id + "/" + shardId;
+            //         BlobStoreIndexShardSnapshot shardSnapshot = readIndexShardMetadata(snapshotDirPath, snapshotIndexShardDirPath, snapshotId);
+            //         SnapshotFiles snapshotFiles = new SnapshotFiles(shardSnapshot.snapshot(), shardSnapshot.indexFiles(), null);
 
-                    // Create the blob container
-                    Path snapshotPath = Paths.get(snapshotDirPath);
-                    BlobPath blobPath = new BlobPath().add(snapshotIndexShardDirPath);
+            //         // Create the blob container
+            //         Path snapshotPath = Paths.get(snapshotDirPath);
+            //         BlobPath blobPath = new BlobPath().add(snapshotIndexShardDirPath);
             
-                    FsBlobStore blobStore = new FsBlobStore(bufferSizeInBytes, snapshotPath, false);
-                    BlobContainer container = blobStore.blobContainer(blobPath);
+            //         FsBlobStore blobStore = new FsBlobStore(bufferSizeInBytes, snapshotPath, false);
+            //         BlobContainer container = blobStore.blobContainer(blobPath);
                     
-                    // Create the directory for the shard's lucene files
-                    Path lucene_dir = Paths.get(luceneFilesBasePath + "/" + index.name + "/" + shardId);
-                    Files.createDirectories(lucene_dir);
-                    final FSDirectory primaryDirectory = FSDirectory.open(lucene_dir, lockFactory);
+            //         // Create the directory for the shard's lucene files
+            //         Path lucene_dir = Paths.get(luceneFilesBasePath + "/" + index.name + "/" + shardId);
+            //         Files.createDirectories(lucene_dir);
+            //         final FSDirectory primaryDirectory = FSDirectory.open(lucene_dir, lockFactory);
                     
-                    for (BlobStoreIndexShardSnapshot.FileInfo fileInfo : snapshotFiles.indexFiles()) {
-                        System.out.println("Unpacking - Blob Name: " + fileInfo.name() + ", Lucene Name: " + fileInfo.metadata().name());
-                        IndexOutput indexOutput = primaryDirectory.createOutput(fileInfo.metadata().name(), IOContext.DEFAULT);
+            //         for (BlobStoreIndexShardSnapshot.FileInfo fileInfo : snapshotFiles.indexFiles()) {
+            //             System.out.println("Unpacking - Blob Name: " + fileInfo.name() + ", Lucene Name: " + fileInfo.metadata().name());
+            //             IndexOutput indexOutput = primaryDirectory.createOutput(fileInfo.metadata().name(), IOContext.DEFAULT);
 
-                        if (fileInfo.name().startsWith("v__")) {
-                            final BytesRef hash = fileInfo.metadata().hash();
-                            indexOutput.writeBytes(hash.bytes, hash.offset, hash.length);
-                        } else {
-                            try (InputStream stream = new SlicedInputStream(fileInfo.numberOfParts()) {
-                                @Override
-                                protected InputStream openSlice(int slice) throws IOException {
-                                    return container.readBlob(fileInfo.partName(slice));
-                                }
-                            }) {
-                                final byte[] buffer = new byte[Math.toIntExact(Math.min(bufferSizeInBytes, fileInfo.length()))];
-                                int length;
-                                while ((length = stream.read(buffer)) > 0) {
-                                    indexOutput.writeBytes(buffer, 0, length);
-                                }
-                            }
-                        }
-                        blobStore.close();
-                        indexOutput.close();
-                    }
+            //             if (fileInfo.name().startsWith("v__")) {
+            //                 final BytesRef hash = fileInfo.metadata().hash();
+            //                 indexOutput.writeBytes(hash.bytes, hash.offset, hash.length);
+            //             } else {
+            //                 try (InputStream stream = new SlicedInputStream(fileInfo.numberOfParts()) {
+            //                     @Override
+            //                     protected InputStream openSlice(int slice) throws IOException {
+            //                         return container.readBlob(fileInfo.partName(slice));
+            //                     }
+            //                 }) {
+            //                     final byte[] buffer = new byte[Math.toIntExact(Math.min(bufferSizeInBytes, fileInfo.length()))];
+            //                     int length;
+            //                     while ((length = stream.read(buffer)) > 0) {
+            //                         indexOutput.writeBytes(buffer, 0, length);
+            //                     }
+            //                 }
+            //             }
+            //             blobStore.close();
+            //             indexOutput.close();
+            //         }
 
-                    // Now, read the documents back out
-                    System.out.println("--- Reading docs in the shard ---");
-                    readDocumentsFromLuceneIndex(lucene_dir.toAbsolutePath().toString());                    
-                }
-            }
+            //         // Now, read the documents back out
+            //         System.out.println("--- Reading docs in the shard ---");
+            //         readDocumentsFromLuceneIndex(lucene_dir.toAbsolutePath().toString());                    
+            //     }
+            // }
 
             
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private static Metadata readGlobalMetadata(String snapshotDirPath, SnapshotId snapshotId) throws Exception {
+        Path snapshotPath = Paths.get(snapshotDirPath);
+        BlobPath blobPath = new BlobPath();
+        blobPath.add(snapshotDirPath);
+
+        FsBlobStore blobStore = new FsBlobStore(
+            131072, // Magic number pulled from running ES process
+            snapshotPath, 
+            false
+        );
+        BlobContainer container = blobStore.blobContainer(blobPath);
+
+        ChecksumBlobStoreFormat<Metadata> global_metadata_format =
+            new ChecksumBlobStoreFormat<>("metadata", "meta-%s.dat", Metadata::fromXContent);
+
+        // Pulled from https://github.com/elastic/elasticsearch/blob/v7.10.2/server/src/main/java/org/elasticsearch/cluster/ClusterModule.java#L180
+        List<NamedXContentRegistry.Entry> entries = new ArrayList<>();
+        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(RepositoriesMetadata.TYPE),
+            RepositoriesMetadata::fromXContent));
+        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(IngestMetadata.TYPE),
+            IngestMetadata::fromXContent));
+        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(ScriptMetadata.TYPE),
+            ScriptMetadata::fromXContent));
+        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(IndexGraveyard.TYPE),
+            IndexGraveyard::fromXContent));
+        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(PersistentTasksCustomMetadata.TYPE),
+            PersistentTasksCustomMetadata::fromXContent));
+        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(ComponentTemplateMetadata.TYPE),
+            ComponentTemplateMetadata::fromXContent));
+        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(ComposableIndexTemplateMetadata.TYPE),
+            ComposableIndexTemplateMetadata::fromXContent));
+        entries.add(new NamedXContentRegistry.Entry(Metadata.Custom.class, new ParseField(DataStreamMetadata.TYPE),
+            DataStreamMetadata::fromXContent));
+        NamedXContentRegistry registry = new NamedXContentRegistry(entries);
+
+        // Read the snapshot details
+        Metadata globalMetadata = global_metadata_format.read(container, snapshotId.getUUID(), registry);
+
+        blobStore.close();
+
+        return globalMetadata;
     }
 
     private static SnapshotInfo readSnapshotDetails(String snapshotDirPath, SnapshotId snapshotId) throws Exception {

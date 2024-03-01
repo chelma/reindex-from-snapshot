@@ -38,7 +38,7 @@ public class IndexCreator {
             root.set(aliasName.value, (ObjectNode) rootJson.get(aliasName.value));
         }
         
-        return root;        
+        return root;
     }
 
     protected static ObjectNode getSettingsJson(IndexMetadata indexMetadata) {
@@ -77,18 +77,6 @@ public class IndexCreator {
         }
         
         return root;
-    }
-
-    protected static String getCreateRequestBody(IndexMetadata indexMetadata) {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode root = mapper.createObjectNode();
-
-        ObjectNode settingsNode = root.putObject("settings");
-        settingsNode.put("number_of_replicas", indexMetadata.getNumberOfReplicas());
-        settingsNode.put("number_of_shards", indexMetadata.getNumberOfShards());
-
-
-        return indexMetadata.toString();
     }
 
     public static void createIndex(String targetName, IndexMetadata indexMetadata, ConnectionDetails connectionDetails) throws Exception {

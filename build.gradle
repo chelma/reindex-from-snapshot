@@ -22,5 +22,10 @@ dependencies {
 }
 
 application {
-    mainClassName = 'com.rfs.PrintOutDemo'
+    mainClassName = 'com.rfs.DemoPrintOutSnapshot'
+}
+
+task demoRecreateIndices(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'com.rfs.DemoRecreateIndices'
 }

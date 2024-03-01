@@ -5,16 +5,42 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class SnapshotRepoData {
-    public static SnapshotRepoData fromRepoFile(String filePath) throws IOException {
+    private static Path findRepoFile(Path dir) throws IOException {
+        Pattern pattern = Pattern.compile("^index-\\d+$");
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
+            for (Path entry : stream) {
+                if (Files.isRegularFile(entry) && pattern.matcher(entry.getFileName().toString()).matches()) {
+                    return entry; // There should only be one match
+                }
+            }
+        }
+        return null; // No match found
+    }
+
+    public static SnapshotRepoData fromRepoFile(Path filePath) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
-        SnapshotRepoData data = mapper.readValue(new File(filePath), SnapshotRepoData.class);
+        SnapshotRepoData data = mapper.readValue(new File(filePath.toString()), SnapshotRepoData.class);
+        data.filePath = filePath;
         return data;
     }
 
+    public static SnapshotRepoData fromRepoDir(Path dir) throws IOException {
+        Path file = findRepoFile(dir);
+        if (file == null) {
+            throw new IOException("No index file found in " + dir);
+        }
+        return fromRepoFile(file);
+    }
+
+    public Path filePath;
     public List<Snapshot> snapshots;
     public Map<String, RawIndex> indices;
     @JsonProperty("min_version")

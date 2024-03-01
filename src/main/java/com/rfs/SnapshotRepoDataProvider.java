@@ -1,6 +1,7 @@
 package com.rfs;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -8,8 +9,12 @@ import java.util.stream.Collectors;
 public class SnapshotRepoDataProvider {
     private final SnapshotRepoData repoData;
 
-    public SnapshotRepoDataProvider(String filePath) throws IOException{
-        this.repoData = SnapshotRepoData.fromRepoFile(filePath);
+    public SnapshotRepoDataProvider(Path dirPath) throws IOException{
+        this.repoData = SnapshotRepoData.fromRepoDir(dirPath);
+    }
+
+    public Path getSnapshotDirPath() {
+        return repoData.filePath.getParent();
     }
 
     public List<SnapshotRepoData.Index> getIndices() {
