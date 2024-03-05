@@ -6,9 +6,10 @@ import java.util.List;
 
 public class DemoRecreateIndices {
     public static void main(String[] args) {
-        // Constants
+        // Constants; will be replaced with user input
         String snapshotName = "global_state_snapshot";
-        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/repo/snapshots";        
+        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/repo/snapshots";
+        ConnectionDetails targetConnection = new ConnectionDetails("localhost", 9200, "elastic-admin", "elastic-password");
 
         try {
             // ==========================================================================================================
@@ -39,6 +40,12 @@ public class DemoRecreateIndices {
             System.out.println("Global Metadata read successfully");
 
             // ==========================================================================================================
+            // Recreate the Global Metadata
+            // ==========================================================================================================
+            System.out.println("Attempting to recreate the Global Metadata...");
+            GlobalMetadataCreator.create(globalMetadataProvider, targetConnection);
+
+            // ==========================================================================================================
             // Read all the Index Metadata
             // ==========================================================================================================
             System.out.println("Attempting to read Index Metadata...");
@@ -53,10 +60,11 @@ public class DemoRecreateIndices {
             // ==========================================================================================================
             // Recreate the indices
             // ==========================================================================================================
-            
-            ConnectionDetails connectionDetails = new ConnectionDetails("localhost", 9200, "elastic-admin", "elastic-password");
+            System.out.println("Attempting to recreate the indices...");
             for (IndexMetadataProvider indexMetadata : indexMetadatas) {
-                IndexCreator.createIndex(indexMetadata.getName() + "_reindexed", indexMetadata, connectionDetails);
+                String reindexName = indexMetadata.getName() + "_reindexed";
+                System.out.println("Recreating index " + indexMetadata.getName() + " as " + reindexName + " on target...");
+                IndexCreator.create(reindexName, indexMetadata, targetConnection);
             }
             
         } catch (Exception e) {

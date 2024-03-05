@@ -22,10 +22,7 @@ public class RestClient {
     
     public void put(String path, String body) throws Exception {
         String urlString = getConnectionString() + "/" + path;
-
-        System.out.println(urlString);
-        System.out.println(body);
-
+        
         URL url = new URL(urlString);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
@@ -50,10 +47,8 @@ public class RestClient {
             os.write(input, 0, input.length);           
         }        
 
-        // Get the response code to determine success
+        // Report the results
         int responseCode = conn.getResponseCode();
-        System.out.println("Response Code: " + responseCode);
-        System.out.println("Response Message: " + conn.getResponseMessage());
 
         String responseBody;
         if (responseCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
@@ -68,8 +63,7 @@ public class RestClient {
             }
         }
 
-
-        System.out.println("Response Body: " + responseBody);
+        System.out.println("Response Code: " + responseCode + ", Response Message: " + conn.getResponseMessage() + ", Response Body: " + responseBody);
 
         conn.disconnect();        
     }

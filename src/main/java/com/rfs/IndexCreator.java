@@ -4,13 +4,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class IndexCreator {
-    public static void createIndex(String targetName, IndexMetadataProvider indexMetadataProvider, ConnectionDetails connectionDetails) throws Exception {
+    public static void create(String targetName, IndexMetadataProvider indexMetadataProvider, ConnectionDetails connectionDetails) throws Exception {
+        // Remove some settings which will cause errors if you try to pass them to the API
+        ObjectNode settings = indexMetadataProvider.getSettingsJson();
+
+        if (settings.has("index") && settings.get("index").isObject()) {
+            ObjectNode indexNode = (ObjectNode) settings.get("index");
+
+            String[] problemFields = {"creation_date", "provided_name", "uuid", "version"};
+            for (String field : problemFields) {
+                indexNode.remove(field);
+            }
+        }
+
         // Assemble the request body
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode root = mapper.createObjectNode();
         root.set("aliases", indexMetadataProvider.getAliasesJson());
         root.set("mappings", indexMetadataProvider.getMappingsJson());
-        root.set("settings", indexMetadataProvider.getSettingsJson());
+        root.set("settings", settings);
         String body = root.toString();
 
         // Send the request

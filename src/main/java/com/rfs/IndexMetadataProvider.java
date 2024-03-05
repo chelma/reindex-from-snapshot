@@ -98,16 +98,10 @@ public class IndexMetadataProvider {
         String rawSettings = indexMetadata.getSettings().toDelimitedString(',');
         String[] pairs = rawSettings.split(",");
 
-        // Remove some settings will cause errors if you try to pass them to the API
-        String[] toRemove = {"index.creation_date", "index.provided_name", "index.uuid", "index.version.created"};
-        String[] filteredPairs = Arrays.stream(pairs)
-            .filter(part -> Arrays.stream(toRemove).noneMatch(part::startsWith))
-            .toArray(String[]::new);;
-
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode root = mapper.createObjectNode();
 
-        for (String pair : filteredPairs) {
+        for (String pair : pairs) {
             String[] keyValue = pair.split("=");
             String key = keyValue[0];
             String value = keyValue[1];
