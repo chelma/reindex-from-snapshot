@@ -127,56 +127,56 @@ public class DemoPrintOutSnapshot {
             // ==========================================================================================================
             // Unpack the blob files
             // ==========================================================================================================
-            // System.out.println("==================================================================");
-            // System.out.println("Unpacking blob files to disk...");
+            System.out.println("==================================================================");
+            System.out.println("Unpacking blob files to disk...");
 
-            // NativeFSLockFactory lockFactory = NativeFSLockFactory.INSTANCE;
+            NativeFSLockFactory lockFactory = NativeFSLockFactory.INSTANCE;
 
-            // for (IndexMetadataProvider indexMetadata : indexMetadatas.values()){
-            //     for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-            //         ShardMetadataProvider shardMetadata = shardMetadatas.get(shardId);
+            for (IndexMetadataProvider indexMetadata : indexMetadatas.values()){
+                for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
+                    ShardMetadataProvider shardMetadata = shardMetadatas.get(shardId);
 
-            //         // Create the blob container
-            //         BlobPath blobPath = new BlobPath().add(shardMetadata.getShardDirPath().toString());            
-            //         FsBlobStore blobStore = new FsBlobStore(ElasticsearchConstants.BUFFER_SIZE_IN_BYTES, shardMetadata.getSnapshotDirPath(), false);
-            //         BlobContainer container = blobStore.blobContainer(blobPath);
+                    // Create the blob container
+                    BlobPath blobPath = new BlobPath().add(shardMetadata.getShardDirPath().toString());            
+                    FsBlobStore blobStore = new FsBlobStore(ElasticsearchConstants.BUFFER_SIZE_IN_BYTES, shardMetadata.getSnapshotDirPath(), false);
+                    BlobContainer container = blobStore.blobContainer(blobPath);
                     
-            //         // Create the directory for the shard's lucene files
-            //         Path lucene_dir = Paths.get(luceneFilesBasePath + "/" + indexMetadata.getName() + "/" + shardId);
-            //         Files.createDirectories(lucene_dir);
-            //         final FSDirectory primaryDirectory = FSDirectory.open(lucene_dir, lockFactory);
+                    // Create the directory for the shard's lucene files
+                    Path lucene_dir = Paths.get(luceneFilesBasePath + "/" + indexMetadata.getName() + "/" + shardId);
+                    Files.createDirectories(lucene_dir);
+                    final FSDirectory primaryDirectory = FSDirectory.open(lucene_dir, lockFactory);
                     
-            //         for (BlobStoreIndexShardSnapshot.FileInfo fileInfo : shardMetadata.getFiles()) {
-            //             System.out.println("Unpacking - Blob Name: " + fileInfo.name() + ", Lucene Name: " + fileInfo.metadata().name());
-            //             IndexOutput indexOutput = primaryDirectory.createOutput(fileInfo.metadata().name(), IOContext.DEFAULT);
+                    for (BlobStoreIndexShardSnapshot.FileInfo fileInfo : shardMetadata.getFiles()) {
+                        System.out.println("Unpacking - Blob Name: " + fileInfo.name() + ", Lucene Name: " + fileInfo.metadata().name());
+                        IndexOutput indexOutput = primaryDirectory.createOutput(fileInfo.metadata().name(), IOContext.DEFAULT);
 
-            //             if (fileInfo.name().startsWith("v__")) {
-            //                 final BytesRef hash = fileInfo.metadata().hash();
-            //                 indexOutput.writeBytes(hash.bytes, hash.offset, hash.length);
-            //             } else {
-            //                 try (InputStream stream = new SlicedInputStream(fileInfo.numberOfParts()) {
-            //                     @Override
-            //                     protected InputStream openSlice(int slice) throws IOException {
-            //                         return container.readBlob(fileInfo.partName(slice));
-            //                     }
-            //                 }) {
-            //                     final byte[] buffer = new byte[Math.toIntExact(Math.min(ElasticsearchConstants.BUFFER_SIZE_IN_BYTES, fileInfo.length()))];
-            //                     int length;
-            //                     while ((length = stream.read(buffer)) > 0) {
-            //                         indexOutput.writeBytes(buffer, 0, length);
-            //                     }
-            //                 }
-            //             }
-            //             blobStore.close();
-            //             indexOutput.close();
-            //         }
+                        if (fileInfo.name().startsWith("v__")) {
+                            final BytesRef hash = fileInfo.metadata().hash();
+                            indexOutput.writeBytes(hash.bytes, hash.offset, hash.length);
+                        } else {
+                            try (InputStream stream = new SlicedInputStream(fileInfo.numberOfParts()) {
+                                @Override
+                                protected InputStream openSlice(int slice) throws IOException {
+                                    return container.readBlob(fileInfo.partName(slice));
+                                }
+                            }) {
+                                final byte[] buffer = new byte[Math.toIntExact(Math.min(ElasticsearchConstants.BUFFER_SIZE_IN_BYTES, fileInfo.length()))];
+                                int length;
+                                while ((length = stream.read(buffer)) > 0) {
+                                    indexOutput.writeBytes(buffer, 0, length);
+                                }
+                            }
+                        }
+                        blobStore.close();
+                        indexOutput.close();
+                    }
 
-            //         // Now, read the documents back out
-            //         System.out.println("--- Reading docs in the shard ---");
-            //         readDocumentsFromLuceneIndex(lucene_dir.toAbsolutePath().toString());
-            //     }
+                    // Now, read the documents back out
+                    System.out.println("--- Reading docs in the shard ---");
+                    readDocumentsFromLuceneIndex(lucene_dir.toAbsolutePath().toString());
+                }
 
-            // }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
