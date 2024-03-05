@@ -11,9 +11,11 @@ import org.elasticsearch.index.snapshots.blobstore.BlobStoreIndexShardSnapshot;
 import org.elasticsearch.repositories.blobstore.ChecksumBlobStoreFormat;
 
 public class ShardMetadataProvider {
+    private final String indexName;
     private final BlobStoreIndexShardSnapshot snapshot;
     private final Path snapshotDirPath;
     private final Path shardDirPath;
+    private final int shardId;
 
     public static ShardMetadataProvider fromSnapshotRepoDataProvider(SnapshotRepoDataProvider repoDataProvider, String snapshotName, String indexName, int shardId) throws Exception {
         String snapshotId = repoDataProvider.getSnapshotId(snapshotName);
@@ -21,7 +23,7 @@ public class ShardMetadataProvider {
         Path shardDirPath = Paths.get(repoDataProvider.getSnapshotDirPath() + "/indices/" + indexId + "/" + shardId);
         BlobStoreIndexShardSnapshot snapshot = readIndexShardMetadata(repoDataProvider.getSnapshotDirPath(), shardDirPath, snapshotId);
 
-        return new ShardMetadataProvider(snapshot, repoDataProvider.getSnapshotDirPath(), shardDirPath);
+        return new ShardMetadataProvider(snapshot, repoDataProvider.getSnapshotDirPath(), indexName, shardDirPath, shardId);
     }
 
     private static BlobStoreIndexShardSnapshot readIndexShardMetadata(Path snapshotDirPath, Path shardDirPath, String snapshotId) throws Exception {
@@ -45,14 +47,20 @@ public class ShardMetadataProvider {
     }
 
 
-    public ShardMetadataProvider(BlobStoreIndexShardSnapshot snapshot, Path snapshotDirPath, Path shardDirPath) {
+    public ShardMetadataProvider(BlobStoreIndexShardSnapshot snapshot, Path snapshotDirPath, String indexName, Path shardDirPath, int shardId) {
         this.snapshot = snapshot;
         this.snapshotDirPath = snapshotDirPath;
+        this.indexName = indexName;
         this.shardDirPath = shardDirPath;
+        this.shardId = shardId;
     }
 
     public List<BlobStoreIndexShardSnapshot.FileInfo> getFiles() {
         return snapshot.indexFiles();
+    }
+
+    public String getIndexName() {
+        return indexName;
     }
 
     public Path getSnapshotDirPath() {
@@ -61,5 +69,9 @@ public class ShardMetadataProvider {
 
     public Path getShardDirPath() {
         return shardDirPath;
+    }
+
+    public int getShardId() {
+        return shardId;
     }
 }

@@ -29,3 +29,8 @@ task demoRecreateIndices(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'com.rfs.DemoRecreateIndices'
 }
+
+task demoReindexDocuments(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'com.rfs.DemoReindexDocuments'
+}

@@ -74,7 +74,6 @@ public class DemoPrintOutSnapshot {
             System.out.println("==================================================================");
             System.out.println("Attempting to read Global Metadata details...");
 
-
             GlobalMetadataProvider globalMetadataProvider = GlobalMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
 
             List<String> componentKeys = new ArrayList<>();
