@@ -104,7 +104,6 @@ public class DemoPrintOutSnapshot {
             // ==========================================================================================================
             System.out.println("==================================================================");
             System.out.println("Attempting to read Index Shard Metadata...");
-            Map<Integer, ShardMetadataProvider> shardMetadatas = new HashMap<>();
             for (IndexMetadataProvider indexMetadata : indexMetadatas.values()) {
                 System.out.println("Reading Index Shard Metadata for index: " + indexMetadata.getName());
                 for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
@@ -112,7 +111,6 @@ public class DemoPrintOutSnapshot {
 
                     // Get the file mapping for the shard
                     ShardMetadataProvider shardMetadataProvider = ShardMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-                    shardMetadatas.put(shardId, shardMetadataProvider);
                     for (BlobStoreIndexShardSnapshot.FileInfo fileInfo : shardMetadataProvider.getFiles()) {
                         System.out.println("File Info: " + fileInfo.toString());
                     }
@@ -129,7 +127,7 @@ public class DemoPrintOutSnapshot {
 
             for (IndexMetadataProvider indexMetadata : indexMetadatas.values()){
                 for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-                    ShardMetadataProvider shardMetadata = shardMetadatas.get(shardId);
+                    ShardMetadataProvider shardMetadata = ShardMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
 
                     // Create the blob container
                     BlobPath blobPath = new BlobPath().add(shardMetadata.getShardDirPath().toString());            
