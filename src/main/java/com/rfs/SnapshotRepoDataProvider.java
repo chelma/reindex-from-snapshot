@@ -31,12 +31,10 @@ public class SnapshotRepoDataProvider {
             .orElse(null);
 
         if (targetSnapshot != null) {
-            targetSnapshot.indexMetadataLookup.keySet().forEach(indexId -> {
-                repoData.indices.forEach((indexName, rawIndex) -> {
-                    if (indexId.equals(rawIndex.id)) {
-                        matchedIndices.add(SnapshotRepoData.Index.fromRawIndex(indexName, rawIndex));
-                    }
-                });
+            repoData.indices.forEach((indexName, rawIndex) -> {
+                if (rawIndex.snapshots.contains(targetSnapshot.uuid)) {
+                    matchedIndices.add(SnapshotRepoData.Index.fromRawIndex(indexName, rawIndex));
+                }
             });
         }
         return matchedIndices;
@@ -57,23 +55,5 @@ public class SnapshotRepoDataProvider {
 
     public String getIndexId(String indexName) {
         return repoData.indices.get(indexName).id;
-    }
-
-    public String getIndexMetadataId (String snapshotName, String indexName) {
-        String indexId = getIndexId(indexName);
-        if (indexId == null) {
-            return null;
-        }
-
-        String metadataLookupKey = repoData.snapshots.stream()
-                .filter(snapshot -> snapshot.name.equals(snapshotName))
-                .map(snapshot -> snapshot.indexMetadataLookup.get(indexId))
-                .findFirst()
-                .orElse(null);
-        if (metadataLookupKey == null) {
-            return null;
-        }
-
-        return repoData.indexMetadataIdentifiers.get(metadataLookupKey);
     }
 }

@@ -11,9 +11,9 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.apache.lucene:lucene-core:8.7.0'
-    implementation 'org.apache.lucene:lucene-analyzers-common:8.7.0'
-    implementation 'org.elasticsearch:elasticsearch:7.10.2'
+    implementation 'org.apache.lucene:lucene-core:7.7.3'
+    implementation 'org.apache.lucene:lucene-analyzers-common:7.7.3'
+    implementation 'org.elasticsearch:elasticsearch:6.8.23'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.3'
     implementation 'com.fasterxml.jackson.core:jackson-annotations:2.12.3'
     implementation 'com.fasterxml.jackson.core:jackson-core:2.12.3'

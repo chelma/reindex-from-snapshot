@@ -32,7 +32,7 @@ public class DemoPrintOutSnapshot {
     public static void main(String[] args) {
         // Constants
         String snapshotName = "global_state_snapshot";
-        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/repo/snapshots";        
+        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/distribution/build/cluster/shared/repo";        
         String luceneFilesBasePath = "/tmp/lucene_files";
 
         try {
@@ -76,13 +76,9 @@ public class DemoPrintOutSnapshot {
 
             GlobalMetadataProvider globalMetadataProvider = GlobalMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
 
-            List<String> componentKeys = new ArrayList<>();
-            globalMetadataProvider.getComponentTemplates().fieldNames().forEachRemaining(componentKeys::add);
-            System.out.println("Global Component Templates Keys: " + componentKeys);
-
-            List<String> indexKeys = new ArrayList<>();
-            globalMetadataProvider.getIndexTemplates().fieldNames().forEachRemaining(indexKeys::add);
-            System.out.println("Global Index Templates Keys: " + indexKeys);
+            List<String> templateKeys = new ArrayList<>();
+            globalMetadataProvider.getTemplates().fieldNames().forEachRemaining(templateKeys::add);
+            System.out.println("Global Templates Keys: " + templateKeys);
 
             // ==========================================================================================================
             // Read all the Index Metadata
@@ -137,7 +133,7 @@ public class DemoPrintOutSnapshot {
 
                     // Create the blob container
                     BlobPath blobPath = new BlobPath().add(shardMetadata.getShardDirPath().toString());            
-                    FsBlobStore blobStore = new FsBlobStore(ElasticsearchConstants.BUFFER_SIZE_IN_BYTES, shardMetadata.getSnapshotDirPath(), false);
+                    FsBlobStore blobStore = new FsBlobStore(ElasticsearchConstants.BUFFER_SETTINGS, shardMetadata.getSnapshotDirPath(), false);
                     BlobContainer container = blobStore.blobContainer(blobPath);
                     
                     // Create the directory for the shard's lucene files
@@ -155,7 +151,7 @@ public class DemoPrintOutSnapshot {
                         } else {
                             try (InputStream stream = new SlicedInputStream(fileInfo.numberOfParts()) {
                                 @Override
-                                protected InputStream openSlice(int slice) throws IOException {
+                                protected InputStream openSlice(long slice) throws IOException {
                                     return container.readBlob(fileInfo.partName(slice));
                                 }
                             }) {

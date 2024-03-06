@@ -24,7 +24,7 @@ public class SnapshotShardUnpacker {
 
         // Create a blob container to read the snapshot blobs
         BlobPath blobPath = new BlobPath().add(shardMetadata.getShardDirPath().toString());            
-        FsBlobStore blobStore = new FsBlobStore(ElasticsearchConstants.BUFFER_SIZE_IN_BYTES, shardMetadata.getSnapshotDirPath(), false);
+        FsBlobStore blobStore = new FsBlobStore(ElasticsearchConstants.BUFFER_SETTINGS, shardMetadata.getSnapshotDirPath(), false);
         BlobContainer container = blobStore.blobContainer(blobPath);
         
         // Create the directory for the shard's lucene files
@@ -42,7 +42,7 @@ public class SnapshotShardUnpacker {
             } else {
                 try (InputStream stream = new SlicedInputStream(fileInfo.numberOfParts()) {
                     @Override
-                    protected InputStream openSlice(int slice) throws IOException {
+                    protected InputStream openSlice(long slice) throws IOException {
                         return container.readBlob(fileInfo.partName(slice));
                     }
                 }) {

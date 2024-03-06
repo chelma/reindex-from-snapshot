@@ -3,8 +3,8 @@ package com.rfs;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.elasticsearch.cluster.metadata.AliasMetadata;
-import org.elasticsearch.cluster.metadata.IndexMetadata;
+import org.elasticsearch.cluster.metadata.AliasMetaData;
+import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.common.blobstore.BlobContainer;
 import org.elasticsearch.common.blobstore.BlobPath;
 import org.elasticsearch.common.blobstore.fs.FsBlobStore;
@@ -17,36 +17,39 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class IndexMetadataProvider {
     private final String indexId;
-    private final IndexMetadata indexMetadata;
+    private final IndexMetaData indexMetadata;
 
     public static IndexMetadataProvider fromSnapshotRepoDataProvider(SnapshotRepoDataProvider repoDataProvider, String snapshotName, String indexName) throws Exception{
         String indexId = repoDataProvider.getIndexId(indexName);
         Path indexDirPath = Paths.get(repoDataProvider.getSnapshotDirPath() + "/indices/" + indexId);
-        String indexMetadataId = repoDataProvider.getIndexMetadataId(snapshotName, indexName);
 
-        IndexMetadata indexMetadata = readIndexMetadata(repoDataProvider.getSnapshotDirPath(), indexDirPath, indexMetadataId);
+        IndexMetaData indexMetadata = readIndexMetadata(repoDataProvider.getSnapshotDirPath(), indexDirPath, repoDataProvider.getSnapshotId(snapshotName));
         return new IndexMetadataProvider(indexId, indexMetadata);
     }
 
-    public IndexMetadataProvider(String indexId, IndexMetadata indexMetadata) {
+    public IndexMetadataProvider(String indexId, IndexMetaData indexMetadata) {
         this.indexId = indexId;
         this.indexMetadata = indexMetadata;
     }
 
-    private static IndexMetadata readIndexMetadata(Path snapshotDirPath, Path indexDirPath, String indexMetadataId) throws Exception {
+    private static IndexMetaData readIndexMetadata(Path snapshotDirPath, Path indexDirPath, String snapshotId) throws Exception {
         BlobPath blobPath = new BlobPath().add(indexDirPath.toString());
 
         FsBlobStore blobStore = new FsBlobStore(
-            ElasticsearchConstants.BUFFER_SIZE_IN_BYTES,
+            ElasticsearchConstants.BUFFER_SETTINGS,
             snapshotDirPath, 
             false
         );
         BlobContainer container = blobStore.blobContainer(blobPath);
 
-        ChecksumBlobStoreFormat<IndexMetadata> indexMetadataFormat =
-            new ChecksumBlobStoreFormat<>("index-metadata", "meta-%s.dat", IndexMetadata::fromXContent);
+        // See https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java#L353
+        boolean compressionEnabled = false;
+
+        ChecksumBlobStoreFormat<IndexMetaData> indexMetadataFormat = new ChecksumBlobStoreFormat<>(
+            "index-metadata", "meta-%s.dat", IndexMetaData::fromXContent, ElasticsearchConstants.EMPTY_REGISTRY, compressionEnabled
+            );
         
-        IndexMetadata indexMetadata = indexMetadataFormat.read(container, indexMetadataId, ElasticsearchConstants.EMPTY_REGISTRY);
+        IndexMetaData indexMetadata = indexMetadataFormat.read(container, snapshotId);
 
         blobStore.close();
 
@@ -68,20 +71,20 @@ public class IndexMetadataProvider {
     public ObjectNode getMappingsJson() throws Exception {
         // Will be something like:
         // {"_doc":{"properties":{"address":{"type":"text"}}}}
-        String rawMetadata = indexMetadata.mapping().source().toString();
+        String rawMetadata = indexMetadata.mapping("_doc").source().toString();
 
         ObjectMapper mapper = new ObjectMapper();
         JsonNode rootJson = mapper.readTree(rawMetadata);
         ObjectNode root = (ObjectNode) rootJson;
         
-        return (ObjectNode) root.get("_doc");
+        return root;
     }
 
     public ObjectNode getAliasesJson() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode root = mapper.createObjectNode();
         for (ObjectCursor<String> aliasName : indexMetadata.getAliases().keys()) {
-            AliasMetadata aliasMetadata = indexMetadata.getAliases().get(aliasName.value);
+            AliasMetaData aliasMetadata = indexMetadata.getAliases().get(aliasName.value);
             String aliasString = aliasMetadata.toString();
             JsonNode rootJson = mapper.readTree(aliasString);
             root.set(aliasName.value, (ObjectNode) rootJson.get(aliasName.value));

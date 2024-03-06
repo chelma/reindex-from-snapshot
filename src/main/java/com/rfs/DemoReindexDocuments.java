@@ -13,7 +13,7 @@ public class DemoReindexDocuments {
     public static void main(String[] args) {
         // Constants; will be replaced with user input
         String snapshotName = "global_state_snapshot";
-        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/repo/snapshots";
+        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/distribution/build/cluster/shared/repo";
         Path luceneFilesBasePath = Paths.get("/tmp/lucene_files");
         ConnectionDetails targetConnection = new ConnectionDetails("localhost", 9200, "elastic-admin", "elastic-password");
 

@@ -8,7 +8,7 @@ public class DemoRecreateIndices {
     public static void main(String[] args) {
         // Constants; will be replaced with user input
         String snapshotName = "global_state_snapshot";
-        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/repo/snapshots";
+        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/distribution/build/cluster/shared/repo";
         ConnectionDetails targetConnection = new ConnectionDetails("localhost", 9200, "elastic-admin", "elastic-password");
 
         try {
@@ -19,9 +19,9 @@ public class DemoRecreateIndices {
             SnapshotRepoDataProvider repoDataProvider = new SnapshotRepoDataProvider(Paths.get(snapshotDirPath));
             System.out.println("Repo data read successfully");
 
-            // ==========================================================================================================
-            // Read the Snapshot details
-            // ==========================================================================================================
+            // // ==========================================================================================================
+            // // Read the Snapshot details
+            // // ==========================================================================================================
             System.out.println("Attempting to read Snapshot details...");
             String snapshotIdString = repoDataProvider.getSnapshotId(snapshotName);
 

@@ -1,6 +1,5 @@
 package com.rfs;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.File;
@@ -10,19 +9,31 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SnapshotRepoData {
     private static Path findRepoFile(Path dir) throws IOException {
-        Pattern pattern = Pattern.compile("^index-\\d+$");
+        // The directory may contain multiple of these files, but we want the highest versioned one
+        Pattern pattern = Pattern.compile("^index-(\\d+)$");
+        Path highestVersionedFile = null;
+        int highestVersion = -1;
+        
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
             for (Path entry : stream) {
-                if (Files.isRegularFile(entry) && pattern.matcher(entry.getFileName().toString()).matches()) {
-                    return entry; // There should only be one match
+                if (Files.isRegularFile(entry)) {
+                    Matcher matcher = pattern.matcher(entry.getFileName().toString());
+                    if (matcher.matches()) {
+                        int version = Integer.parseInt(matcher.group(1));
+                        if (version > highestVersion) {
+                            highestVersion = version;
+                            highestVersionedFile = entry;
+                        }
+                    }
                 }
             }
         }
-        return null; // No match found
+        return highestVersionedFile;
     }
 
     public static SnapshotRepoData fromRepoFile(Path filePath) throws IOException {
@@ -43,25 +54,16 @@ public class SnapshotRepoData {
     public Path filePath;
     public List<Snapshot> snapshots;
     public Map<String, RawIndex> indices;
-    @JsonProperty("min_version")
-    public String minVersion;
-    @JsonProperty("index_metadata_identifiers")
-    public Map<String, String> indexMetadataIdentifiers;
 
     public static class Snapshot {
         public String name;
         public String uuid;
         public int state;
-        @JsonProperty("index_metadata_lookup")
-        public Map<String, String> indexMetadataLookup;
-        public String version;
     }
 
     public static class RawIndex {
         public String id;
         public List<String> snapshots;
-        @JsonProperty("shard_generations")
-        public List<String> shardGenerations;
     }
 
     public static class Index {
@@ -70,14 +72,12 @@ public class SnapshotRepoData {
             index.name = name;
             index.id = rawIndex.id;
             index.snapshots = rawIndex.snapshots;
-            index.shardGenerations = rawIndex.shardGenerations;
             return index;
         }
 
         public String name;
         public String id;
         public List<String> snapshots;
-        public List<String> shardGenerations;
     }
 }
 

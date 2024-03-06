@@ -29,17 +29,21 @@ public class SnapshotMetadataProvider {
         blobPath.add(snapshotDirPath.toString());
 
         FsBlobStore blobStore = new FsBlobStore(
-            ElasticsearchConstants.BUFFER_SIZE_IN_BYTES,
+            ElasticsearchConstants.BUFFER_SETTINGS,
             snapshotDirPath, 
             false
         );
         BlobContainer container = blobStore.blobContainer(blobPath);
 
-        ChecksumBlobStoreFormat<SnapshotInfo> snapshotFormat =
-            new ChecksumBlobStoreFormat<>("snapshot", "snap-%s.dat", SnapshotInfo::fromXContentInternal);
+        // See https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java#L353
+        boolean compressionEnabled = false;
+
+        ChecksumBlobStoreFormat<SnapshotInfo> snapshotFormat = new ChecksumBlobStoreFormat<>(
+            "snapshot", "snap-%s.dat", SnapshotInfo::fromXContentInternal, ElasticsearchConstants.EMPTY_REGISTRY, compressionEnabled
+        );
 
         // Read the snapshot details
-        SnapshotInfo snapshotInfo = snapshotFormat.read(container, snapshotId, ElasticsearchConstants.EMPTY_REGISTRY);
+        SnapshotInfo snapshotInfo = snapshotFormat.read(container, snapshotId);
 
         blobStore.close();
 

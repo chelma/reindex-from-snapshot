@@ -30,16 +30,20 @@ public class ShardMetadataProvider {
         BlobPath blobPath = new BlobPath().add(shardDirPath.toString());
 
         FsBlobStore blobStore = new FsBlobStore(
-            ElasticsearchConstants.BUFFER_SIZE_IN_BYTES,
+            ElasticsearchConstants.BUFFER_SETTINGS,
             snapshotDirPath, 
             false
         );
         BlobContainer container = blobStore.blobContainer(blobPath);
 
-        ChecksumBlobStoreFormat<BlobStoreIndexShardSnapshot> indexShardSnapshotFormat =
-            new ChecksumBlobStoreFormat<>("snapshot", "snap-%s.dat", BlobStoreIndexShardSnapshot::fromXContent);
+        // See https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java#L353
+        boolean compressionEnabled = false;
 
-        BlobStoreIndexShardSnapshot shardSnapshot = indexShardSnapshotFormat.read(container, snapshotId, ElasticsearchConstants.EMPTY_REGISTRY);
+        ChecksumBlobStoreFormat<BlobStoreIndexShardSnapshot> indexShardSnapshotFormat = new ChecksumBlobStoreFormat<>(
+            "snapshot", "snap-%s.dat", BlobStoreIndexShardSnapshot::fromXContent, ElasticsearchConstants.EMPTY_REGISTRY, compressionEnabled
+        );
+
+        BlobStoreIndexShardSnapshot shardSnapshot = indexShardSnapshotFormat.read(container, snapshotId);
 
         blobStore.close();
 
