@@ -15,7 +15,8 @@ public class DemoReindexDocuments {
         String snapshotName = "global_state_snapshot";
         String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/distribution/build/cluster/shared/repo";
         Path luceneFilesBasePath = Paths.get("/tmp/lucene_files");
-        ConnectionDetails targetConnection = new ConnectionDetails("localhost", 9200, "elastic-admin", "elastic-password");
+        ConnectionDetails targetConnection = new ConnectionDetails("https://localhost:9200", "elastic-admin", "elastic-password");
+        // ConnectionDetails targetConnection = new ConnectionDetails("http://localhost:9200", "elastic-admin", "elastic-password");
 
         try {
             // ==========================================================================================================

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class IndexCreator {
-    public static void create(String targetName, IndexMetadataProvider indexMetadataProvider, ConnectionDetails connectionDetails) throws Exception {
+    public static void create(String targetName, IndexMetadataProvider indexMetadataProvider, ConnectionDetails connectionDetails, Transformer transformer) throws Exception {
         // Remove some settings which will cause errors if you try to pass them to the API
         ObjectNode settings = indexMetadataProvider.getSettingsJson();
 
@@ -23,9 +23,12 @@ public class IndexCreator {
         root.set("aliases", indexMetadataProvider.getAliasesJson());
         root.set("mappings", indexMetadataProvider.getMappingsJson());
         root.set("settings", settings);
-        String body = root.toString();
+
+        // Transform the body as necessary
+        ObjectNode transformedRoot = transformer.transformIndexBody(root);
 
         // Send the request
+        String body = transformedRoot.toString();
         RestClient client = new RestClient(connectionDetails);
         client.put(targetName, body);
     }
