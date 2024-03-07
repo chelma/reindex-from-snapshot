@@ -11,12 +11,21 @@ import org.apache.lucene.document.Document;
 
 public class DemoReindexDocuments {
     public static void main(String[] args) {
-        // Constants; will be replaced with user input
-        String snapshotName = "global_state_snapshot";
-        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/distribution/build/cluster/shared/repo";
-        Path luceneFilesBasePath = Paths.get("/tmp/lucene_files");
-        ConnectionDetails targetConnection = new ConnectionDetails("https://localhost:9200", "elastic-admin", "elastic-password");
-        // ConnectionDetails targetConnection = new ConnectionDetails("http://localhost:9200", "elastic-admin", "elastic-password");
+        if (args.length < 6) {
+            System.out.println("Usage: java DemoReindexDocuments "
+                                + " <snapshot name> <absolute path to snapshot directory> <absolute path to dir where we'll put the lucene docs>"
+                                + " <target host and port (e.g. http://localhost:9200)> <target username> <target password>");
+            return;
+        }
+
+        String snapshotName = args[0];
+        String snapshotDirPath = args[1];
+        String luceneBasePathString = args[2];
+        String targetHost = args[3];
+        String targetUser = args[4];
+        String targetPass = args[5];
+        Path luceneBasePath = Paths.get(luceneBasePathString);
+        ConnectionDetails targetConnection = new ConnectionDetails(targetHost, targetUser, targetPass);
 
         try {
             // ==========================================================================================================
@@ -65,7 +74,7 @@ public class DemoReindexDocuments {
 
                     // Get the shard metadata
                     ShardMetadataProvider shardMetadata = ShardMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-                    SnapshotShardUnpacker.unpack(shardMetadata, luceneFilesBasePath);                    
+                    SnapshotShardUnpacker.unpack(shardMetadata, luceneBasePath);                    
                 }
             }
 
@@ -81,7 +90,7 @@ public class DemoReindexDocuments {
                 for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
                     System.out.println("=== Index Id: " + indexMetadata.getName() + ", Shard ID: " + shardId + " ===");
 
-                    List<Document> documents = LuceneDocumentsReader.readDocuments(luceneFilesBasePath, indexMetadata.getName(), shardId);
+                    List<Document> documents = LuceneDocumentsReader.readDocuments(luceneBasePath, indexMetadata.getName(), shardId);
                     System.out.println("Documents read successfully");
 
                     for (Document document : documents) {
