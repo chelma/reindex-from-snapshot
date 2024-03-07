@@ -20,6 +20,9 @@ public class DemoRecreateIndices {
         String targetPass = args[4];
         ConnectionDetails targetConnection = new ConnectionDetails(targetHost, targetUser, targetPass);
 
+        // Should probably be passed in as an argument
+        String[] templateWhitelist = {"posts_index_template"};
+
         // Should determine the source, target versions programmatically.  The dimensionality is from the target I'm using
         // to test.
         Transformer_ES_6_8_to_OS_2_11 transformer = new Transformer_ES_6_8_to_OS_2_11(3);
@@ -56,7 +59,6 @@ public class DemoRecreateIndices {
             // Recreate the Global Metadata
             // ==========================================================================================================
             System.out.println("Attempting to recreate the Global Metadata...");
-            String[] templateWhitelist = {"posts_index_template"};
             GlobalMetadataCreator.create(globalMetadataProvider, targetConnection, templateWhitelist, transformer);
 
             // ==========================================================================================================
