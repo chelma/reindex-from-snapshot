@@ -6,25 +6,25 @@ import java.util.List;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class GlobalMetadataCreator {
-    public static void create(GlobalMetadataProvider globalMetadataProvider, ConnectionDetails connectionDetails, String[] templateWhitelist, Transformer transformer) throws Exception {
+    public static void create(GlobalMetadata globalMetadata, ConnectionDetails connectionDetails, String[] templateWhitelist, Transformer transformer) throws Exception {
         System.out.println("Setting Global Metadata");
-        createTemplates(globalMetadataProvider, connectionDetails, templateWhitelist, transformer);
+        createTemplates(globalMetadata, connectionDetails, templateWhitelist, transformer);
     }
 
-    public static void createTemplates(GlobalMetadataProvider globalMetadataProvider, ConnectionDetails connectionDetails, String[] templateWhitelist, Transformer transformer) throws Exception {
+    public static void createTemplates(GlobalMetadata globalMetadata, ConnectionDetails connectionDetails, String[] templateWhitelist, Transformer transformer) throws Exception {
         System.out.println("Setting Component Templates");
 
         if (templateWhitelist != null) {
             for (String templateName : templateWhitelist) {
                 System.out.println("Setting Template: " + templateName);
-                ObjectNode settings = (ObjectNode) globalMetadataProvider.getTemplates().get(templateName);
+                ObjectNode settings = (ObjectNode) globalMetadata.getTemplates().get(templateName);
 
                 ObjectNode transformedSettings = transformer.transformTemplateBody(settings);
                 createTemplate(templateName, transformedSettings, connectionDetails);
             }
         } else {
             // Get the template names
-            ObjectNode templates = globalMetadataProvider.getTemplates();
+            ObjectNode templates = globalMetadata.getTemplates();
             List<String> templateKeys = new ArrayList<>();
             templates.fieldNames().forEachRemaining(templateKeys::add);
 

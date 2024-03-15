@@ -74,42 +74,42 @@ public class DemoPrintOutSnapshot {
                 return;
             }
             SnapshotMetadata snapshotMetadata = SnapshotMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
-            System.out.println("Snapshot Metadata State: " + snapshotMetadata.state);
-            System.out.println("Snapshot Metadata State Reason: " + snapshotMetadata.reason);
-            System.out.println("Snapshot Metadata Indices: " + snapshotMetadata.indices);
-            System.out.println("Snapshot Metadata Shards Total: " + snapshotMetadata.totalShards);
-            System.out.println("Snapshot Metadata Shards Successful: " + snapshotMetadata.successfulShards);
+            System.out.println("Snapshot Metadata State: " + snapshotMetadata.getState());
+            System.out.println("Snapshot Metadata State Reason: " + snapshotMetadata.getReason());
+            System.out.println("Snapshot Metadata Indices: " + snapshotMetadata.getIndices());
+            System.out.println("Snapshot Metadata Shards Total: " + snapshotMetadata.getTotalShards());
+            System.out.println("Snapshot Metadata Shards Successful: " + snapshotMetadata.getSuccessfulShards());
 
-            // // ==========================================================================================================
-            // // Read the Global Metadata
-            // // ==========================================================================================================
-            // System.out.println("==================================================================");
-            // System.out.println("Attempting to read Global Metadata details...");
+            // ==========================================================================================================
+            // Read the Global Metadata
+            // ==========================================================================================================
+            System.out.println("==================================================================");
+            System.out.println("Attempting to read Global Metadata details...");
 
-            // GlobalMetadataProvider globalMetadataProvider = GlobalMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            GlobalMetadata globalMetadata = GlobalMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
 
-            // List<String> templateKeys = new ArrayList<>();
-            // globalMetadataProvider.getTemplates().fieldNames().forEachRemaining(templateKeys::add);
-            // System.out.println("Global Templates Keys: " + templateKeys);
+            List<String> templateKeys = new ArrayList<>();
+            globalMetadata.getTemplates().fieldNames().forEachRemaining(templateKeys::add);
+            System.out.println("Global Templates Keys: " + templateKeys);
 
-            // // ==========================================================================================================
-            // // Read all the Index Metadata
-            // // ==========================================================================================================
-            // System.out.println("==================================================================");
-            // System.out.println("Attempting to read Index Metadata...");
-            // Map<String, IndexMetadataProvider> indexMetadatas = new HashMap<>();
-            // for (SnapshotRepoData.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
-            //     System.out.println("Reading Index Metadata for index: " + index.name);
-            //     IndexMetadataProvider indexMetadataProvider = IndexMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.name);
-            //     indexMetadatas.put(index.name, indexMetadataProvider);
+            // ==========================================================================================================
+            // Read all the Index Metadata
+            // ==========================================================================================================
+            System.out.println("==================================================================");
+            System.out.println("Attempting to read Index Metadata...");
+            Map<String, IndexMetadata> indexMetadatas = new HashMap<>();
+            for (SnapshotRepoData.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
+                System.out.println("Reading Index Metadata for index: " + index.name);
+                IndexMetadata indexMetadata = IndexMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.name);
+                indexMetadatas.put(index.name, indexMetadata);
 
-            //     System.out.println("Index Id: " + indexMetadataProvider.getId());
-            //     System.out.println("Index Number of Shards: " + indexMetadataProvider.getNumberOfShards());
-            //     System.out.println("Index Settings: " + indexMetadataProvider.getSettingsJson().toString());
-            //     System.out.println("Index Mappings: " + indexMetadataProvider.getMappingsJson().toString());
-            //     System.out.println("Index Aliases: " + indexMetadataProvider.getAliasesJson().toString());
-            // }
-            // System.out.println("Index Metadata read successfully");
+                System.out.println("Index Id: " + indexMetadata.getId());
+                System.out.println("Index Number of Shards: " + indexMetadata.getNumberOfShards());
+                System.out.println("Index Settings: " + indexMetadata.getSettings().toString());
+                System.out.println("Index Mappings: " + indexMetadata.getMappings().toString());
+                System.out.println("Index Aliases: " + indexMetadata.getAliases().toString());
+            }
+            System.out.println("Index Metadata read successfully");
 
             // // ==========================================================================================================
             // // Read the Index Shard Metadata for the Snapshot

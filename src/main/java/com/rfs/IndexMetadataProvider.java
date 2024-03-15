@@ -1,127 +1,48 @@
 package com.rfs;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 
-import org.elasticsearch.cluster.metadata.AliasMetaData;
-import org.elasticsearch.cluster.metadata.IndexMetaData;
-import org.elasticsearch.common.blobstore.BlobContainer;
-import org.elasticsearch.common.blobstore.BlobPath;
-import org.elasticsearch.common.blobstore.fs.FsBlobStore;
-import org.elasticsearch.repositories.blobstore.ChecksumBlobStoreFormat;
+import org.apache.lucene.codecs.CodecUtil;
+import org.apache.lucene.store.ByteArrayIndexInput;
 
-import com.carrotsearch.hppc.cursors.ObjectCursor;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 
 public class IndexMetadataProvider {
-    private final String indexId;
-    private final IndexMetaData indexMetadata;
-
-    public static IndexMetadataProvider fromSnapshotRepoDataProvider(SnapshotRepoDataProvider repoDataProvider, String snapshotName, String indexName) throws Exception{
+    public static IndexMetadata fromSnapshotRepoDataProvider(SnapshotRepoDataProvider repoDataProvider, String snapshotName, String indexName) throws Exception{
+        String snapshotId = repoDataProvider.getSnapshotId(snapshotName);        
         String indexId = repoDataProvider.getIndexId(indexName);
-        Path indexDirPath = Paths.get(repoDataProvider.getSnapshotDirPath() + "/indices/" + indexId);
+        String indexDirPath = repoDataProvider.getSnapshotDirPath() + "/indices/" + indexId;        
+        String filePath = indexDirPath + "/meta-" + snapshotId + ".dat";
 
-        IndexMetaData indexMetadata = readIndexMetadata(repoDataProvider.getSnapshotDirPath(), indexDirPath, repoDataProvider.getSnapshotId(snapshotName));
-        return new IndexMetadataProvider(indexId, indexMetadata);
-    }
+        try (InputStream fis = new FileInputStream(new File(filePath))) {
+            // Don't fully understand what the value of this code is, but it progresses the stream so we need to do it
+            // See: https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/ChecksumBlobStoreFormat.java#L100
+            byte[] bytes = fis.readAllBytes();
+            ByteArrayIndexInput indexInput = new ByteArrayIndexInput("index-metadata", bytes);
+            CodecUtil.checksumEntireFile(indexInput);
+            CodecUtil.checkHeader(indexInput, "index-metadata", 1, 1);
+            int filePointer = (int) indexInput.getFilePointer();
+            InputStream bis = new ByteArrayInputStream(bytes, filePointer, bytes.length - filePointer);
 
-    public IndexMetadataProvider(String indexId, IndexMetaData indexMetadata) {
-        this.indexId = indexId;
-        this.indexMetadata = indexMetadata;
-    }
+            // Taken from: https://github.com/elastic/elasticsearch/blob/6.8/libs/x-content/src/main/java/org/elasticsearch/common/xcontent/smile/SmileXContent.java#L55
+            SmileFactory smileFactory = new SmileFactory();
+            smileFactory.configure(SmileGenerator.Feature.ENCODE_BINARY_AS_7BIT, false);
+            smileFactory.configure(SmileFactory.Feature.FAIL_ON_SYMBOL_HASH_OVERFLOW, false);
+            smileFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
+            smileFactory.configure(JsonParser.Feature.STRICT_DUPLICATE_DETECTION, false);
+            ObjectMapper smileMapper = new ObjectMapper(smileFactory);
 
-    private static IndexMetaData readIndexMetadata(Path snapshotDirPath, Path indexDirPath, String snapshotId) throws Exception {
-        BlobPath blobPath = new BlobPath().add(indexDirPath.toString());
-
-        FsBlobStore blobStore = new FsBlobStore(
-            ElasticsearchConstants.BUFFER_SETTINGS,
-            snapshotDirPath, 
-            false
-        );
-        BlobContainer container = blobStore.blobContainer(blobPath);
-
-        // See https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java#L353
-        boolean compressionEnabled = false;
-
-        ChecksumBlobStoreFormat<IndexMetaData> indexMetadataFormat = new ChecksumBlobStoreFormat<>(
-            "index-metadata", "meta-%s.dat", IndexMetaData::fromXContent, ElasticsearchConstants.EMPTY_REGISTRY, compressionEnabled
-            );
-        
-        IndexMetaData indexMetadata = indexMetadataFormat.read(container, snapshotId);
-
-        blobStore.close();
-
-        return indexMetadata;
-    }
-
-    public String getId() {
-        return indexId;
-    }
-
-    public String getName() {
-        return indexMetadata.getIndex().getName();
-    }
-
-    public int getNumberOfShards() {
-        return indexMetadata.getNumberOfShards();
-    }
-
-    public ObjectNode getMappingsJson() throws Exception {
-        // Will be something like:
-        // {"_doc":{"properties":{"address":{"type":"text"}}}}
-        String rawMetadata = indexMetadata.mapping("_doc").source().toString();
-
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode rootJson = mapper.readTree(rawMetadata);
-        ObjectNode root = (ObjectNode) rootJson;
-        
-        return root;
-    }
-
-    public ObjectNode getAliasesJson() throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode root = mapper.createObjectNode();
-        for (ObjectCursor<String> aliasName : indexMetadata.getAliases().keys()) {
-            AliasMetaData aliasMetadata = indexMetadata.getAliases().get(aliasName.value);
-            String aliasString = aliasMetadata.toString();
-            JsonNode rootJson = mapper.readTree(aliasString);
-            root.set(aliasName.value, (ObjectNode) rootJson.get(aliasName.value));
+            JsonNode jsonNode = smileMapper.readTree(bis);
+            return IndexMetadata.fromJsonNode(jsonNode, indexId, indexName);
         }
-        
-        return root;
-    }
-
-    public ObjectNode getSettingsJson() {
-        // Will be something like:
-        // index.creation_date=1709172482837,index.number_of_replicas=1,index.number_of_shards=1,index.provided_name=index_2,
-        // index.routing.allocation.include._tier_preference=data_content,index.uuid=a1YVzezrRpCw_XiAW7yyLg,index.version.created=7100299,
-        String rawSettings = indexMetadata.getSettings().toDelimitedString(',');
-        String[] pairs = rawSettings.split(",");
-
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode root = mapper.createObjectNode();
-
-        for (String pair : pairs) {
-            String[] keyValue = pair.split("=");
-            String key = keyValue[0];
-            String value = keyValue[1];
-            
-            String[] parts = key.split("\\.");
-            ObjectNode current = root;
-            
-            for (int i = 0; i < parts.length - 1; i++) {
-                String part = parts[i];
-                if (!current.has(part)) {
-                    current.set(part, mapper.createObjectNode());
-                }
-                current = (ObjectNode) current.get(part);
-            }
-            
-            current.put(parts[parts.length - 1], value);
-        }
-        
-        return root;
     }
 }

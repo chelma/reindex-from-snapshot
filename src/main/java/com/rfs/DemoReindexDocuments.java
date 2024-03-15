@@ -53,54 +53,54 @@ public class DemoReindexDocuments {
             // ==========================================================================================================
             System.out.println("==================================================================");
             System.out.println("Attempting to read Index Metadata...");
-            Map<String, IndexMetadataProvider> indexMetadatas = new HashMap<>();
+            Map<String, IndexMetadata> indexMetadatas = new HashMap<>();
             for (SnapshotRepoData.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
                 System.out.println("Reading Index Metadata for index: " + index.name);
-                IndexMetadataProvider indexMetadataProvider = IndexMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.name);
-                indexMetadatas.put(index.name, indexMetadataProvider);
+                IndexMetadata indexMetadata = IndexMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.name);
+                indexMetadatas.put(index.name, indexMetadata);
             }
             System.out.println("Index Metadata read successfully");
 
-            // ==========================================================================================================
-            // Unpack the snapshot blobs
-            // ==========================================================================================================
-            System.out.println("==================================================================");
-            System.out.println("Unpacking blob files to disk...");
+            // // ==========================================================================================================
+            // // Unpack the snapshot blobs
+            // // ==========================================================================================================
+            // System.out.println("==================================================================");
+            // System.out.println("Unpacking blob files to disk...");
 
-            for (IndexMetadataProvider indexMetadata : indexMetadatas.values()) {
-                System.out.println("Processing index: " + indexMetadata.getName());
-                for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-                    System.out.println("=== Shard ID: " + shardId + " ===");
+            // for (IndexMetadataProvider indexMetadata : indexMetadatas.values()) {
+            //     System.out.println("Processing index: " + indexMetadata.getName());
+            //     for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
+            //         System.out.println("=== Shard ID: " + shardId + " ===");
 
-                    // Get the shard metadata
-                    ShardMetadataProvider shardMetadata = ShardMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-                    SnapshotShardUnpacker.unpack(shardMetadata, luceneBasePath);                    
-                }
-            }
+            //         // Get the shard metadata
+            //         ShardMetadataProvider shardMetadata = ShardMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+            //         SnapshotShardUnpacker.unpack(shardMetadata, luceneBasePath);                    
+            //     }
+            // }
 
-            System.out.println("Blob files unpacked successfully");
+            // System.out.println("Blob files unpacked successfully");
 
-            // ==========================================================================================================
-            // Reindex the documents
-            // ==========================================================================================================
-            System.out.println("==================================================================");
-            System.out.println("Reindexing the documents...");
+            // // ==========================================================================================================
+            // // Reindex the documents
+            // // ==========================================================================================================
+            // System.out.println("==================================================================");
+            // System.out.println("Reindexing the documents...");
 
-            for (IndexMetadataProvider indexMetadata : indexMetadatas.values()) {
-                for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-                    System.out.println("=== Index Id: " + indexMetadata.getName() + ", Shard ID: " + shardId + " ===");
+            // for (IndexMetadataProvider indexMetadata : indexMetadatas.values()) {
+            //     for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
+            //         System.out.println("=== Index Id: " + indexMetadata.getName() + ", Shard ID: " + shardId + " ===");
 
-                    List<Document> documents = LuceneDocumentsReader.readDocuments(luceneBasePath, indexMetadata.getName(), shardId);
-                    System.out.println("Documents read successfully");
+            //         List<Document> documents = LuceneDocumentsReader.readDocuments(luceneBasePath, indexMetadata.getName(), shardId);
+            //         System.out.println("Documents read successfully");
 
-                    for (Document document : documents) {
-                        String targetIndex = indexMetadata.getName() + "_reindexed";
-                        DocumentReindexer.reindex(targetIndex, document, targetConnection);
-                    }
-                }
-            }
+            //         for (Document document : documents) {
+            //             String targetIndex = indexMetadata.getName() + "_reindexed";
+            //             DocumentReindexer.reindex(targetIndex, document, targetConnection);
+            //         }
+            //     }
+            // }
 
-            System.out.println("Documents reindexed successfully");
+            // System.out.println("Documents reindexed successfully");
             
         } catch (Exception e) {
             e.printStackTrace();
