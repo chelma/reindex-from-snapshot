@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.dataformat.smile.SmileParser;
 
 /**
@@ -38,6 +39,30 @@ public class SnapshotMetadata {
     public final int totalShards;
     public final int successfulShards;
     public final Boolean includeGlobalState;
+
+    /**
+     * A simplified version of the Elasticsearch approach; see here [1] for more details.
+     * 
+     * [1] https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/snapshots/SnapshotInfo.java#L583
+     */
+    public static SnapshotMetadata fromJsonNode(JsonNode root) throws Exception {
+        // Initialize the metadata fields
+        String name = null;
+        String uuid = null;
+        int versionId = 0;
+        State state = null;
+        String reason = null;
+        List<String> indices = new ArrayList<>();
+        int totalShards = 0;
+        int successfulShards = 0;
+        Boolean includeGlobalState = null;
+        
+        return null;
+
+        // return new SnapshotMetadata(name, uuid, versionId, state, reason, indices, totalShards, successfulShards, includeGlobalState);
+    }
+
+
 
     /**
      * A simplified version of the Elasticsearch approach; see here [1] for more details.

@@ -10,6 +10,8 @@ import org.apache.lucene.store.ByteArrayIndexInput;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import com.fasterxml.jackson.dataformat.smile.SmileParser;
@@ -42,9 +44,12 @@ public class SnapshotMetadataProvider {
             smileFactory.configure(SmileFactory.Feature.FAIL_ON_SYMBOL_HASH_OVERFLOW, false);
             smileFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
             smileFactory.configure(JsonParser.Feature.STRICT_DUPLICATE_DETECTION, false);
-            SmileParser parser = smileFactory.createParser((InputStream) bis);
+            
 
-            return SnapshotMetadata.fromParser(parser);
+            ObjectMapper smileMapper = new ObjectMapper(smileFactory);
+            JsonNode jsonNode = smileMapper.readTree(bis);
+
+            return SnapshotMetadata.fromJsonNode(jsonNode);
         }
     }    
 }
