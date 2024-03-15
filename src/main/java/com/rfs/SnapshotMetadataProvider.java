@@ -1,81 +1,50 @@
 package com.rfs;
 
-import java.nio.file.Path;
-import java.util.List;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 
-import org.elasticsearch.common.blobstore.BlobContainer;
-import org.elasticsearch.common.blobstore.BlobPath;
-import org.elasticsearch.common.blobstore.fs.FsBlobStore;
-import org.elasticsearch.repositories.blobstore.ChecksumBlobStoreFormat;
-import org.elasticsearch.snapshots.SnapshotInfo;
+import org.apache.lucene.codecs.CodecUtil;
+import org.apache.lucene.store.ByteArrayIndexInput;
+
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
+import com.fasterxml.jackson.dataformat.smile.SmileParser;
 
 public class SnapshotMetadataProvider {
-    private final SnapshotInfo snapshotInfo;
 
-    public static SnapshotMetadataProvider fromSnapshotRepoDataProvider(SnapshotRepoDataProvider repoDataProvider, String snapshotName) throws Exception {
+    public static SnapshotMetadata fromSnapshotRepoDataProvider(SnapshotRepoDataProvider repoDataProvider, String snapshotName) throws Exception {
         String snapshotId = repoDataProvider.getSnapshotId(snapshotName);
 
         if (snapshotId == null) {
             throw new Exception("Snapshot not found");
         }
 
-        SnapshotInfo snapshotInfo = readSnapshotDetails(repoDataProvider.getSnapshotDirPath(), snapshotId);
+        String filePath = repoDataProvider.getSnapshotDirPath().toString() + "/snap-" + snapshotId + ".dat";
 
-        return new SnapshotMetadataProvider(snapshotInfo);
-    }
+        try (InputStream fis = new FileInputStream(new File(filePath))) {
+            // Don't fully understand what the value of this code is, but it progresses the stream so we need to do it
+            // See: https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/ChecksumBlobStoreFormat.java#L100
+            byte[] bytes = fis.readAllBytes();
+            ByteArrayIndexInput indexInput = new ByteArrayIndexInput("snapshot-metadata", bytes);
+            CodecUtil.checksumEntireFile(indexInput);
+            CodecUtil.checkHeader(indexInput, "snapshot", 1, 1);
+            int filePointer = (int) indexInput.getFilePointer();
+            InputStream bis = new ByteArrayInputStream(bytes, filePointer, bytes.length - filePointer);
 
-    private static SnapshotInfo readSnapshotDetails(Path snapshotDirPath, String snapshotId) throws Exception {
-        BlobPath blobPath = new BlobPath();
-        blobPath.add(snapshotDirPath.toString());
+            // Configure our parser
+            // Taken from: https://github.com/elastic/elasticsearch/blob/6.8/libs/x-content/src/main/java/org/elasticsearch/common/xcontent/smile/SmileXContent.java#L55
+            SmileFactory smileFactory = new SmileFactory();
+            smileFactory.configure(SmileGenerator.Feature.ENCODE_BINARY_AS_7BIT, false);
+            smileFactory.configure(SmileFactory.Feature.FAIL_ON_SYMBOL_HASH_OVERFLOW, false);
+            smileFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
+            smileFactory.configure(JsonParser.Feature.STRICT_DUPLICATE_DETECTION, false);
+            SmileParser parser = smileFactory.createParser((InputStream) bis);
 
-        FsBlobStore blobStore = new FsBlobStore(
-            ElasticsearchConstants.BUFFER_SETTINGS,
-            snapshotDirPath, 
-            false
-        );
-        BlobContainer container = blobStore.blobContainer(blobPath);
-
-        // See https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java#L353
-        boolean compressionEnabled = false;
-
-        ChecksumBlobStoreFormat<SnapshotInfo> snapshotFormat = new ChecksumBlobStoreFormat<>(
-            "snapshot", "snap-%s.dat", SnapshotInfo::fromXContentInternal, ElasticsearchConstants.EMPTY_REGISTRY, compressionEnabled
-        );
-
-        // Read the snapshot details
-        SnapshotInfo snapshotInfo = snapshotFormat.read(container, snapshotId);
-
-        blobStore.close();
-
-        return snapshotInfo;
-    }
-
-    public SnapshotMetadataProvider(SnapshotInfo snapshotInfo) {
-        this.snapshotInfo = snapshotInfo;
-    }
-
-    public String getReason() {
-        return snapshotInfo.reason();
-    }
-
-    public List<String> getIndices() {
-        return snapshotInfo.indices();
-    }
-
-    public int getShardsFailed() {
-        return snapshotInfo.failedShards();
-    }
-
-    public int getShardsSuccessful() {
-        return snapshotInfo.successfulShards();
-    }
-
-    public int getShardsTotal() {
-        return snapshotInfo.totalShards();
-    }
-
-    public String getState() {
-        return snapshotInfo.state().toString();
-    }
-    
+            return SnapshotMetadata.fromParser(parser);
+        }
+    }    
 }

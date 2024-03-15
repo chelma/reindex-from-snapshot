@@ -45,7 +45,7 @@ public class DemoReindexDocuments {
                 System.out.println("Snapshot not found");
                 return;
             }
-            SnapshotMetadataProvider snapshotMetadataProvider = SnapshotMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            SnapshotMetadata snapshotMetadata = SnapshotMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
             System.out.println("Snapshot data read successfully");
 
             // ==========================================================================================================
