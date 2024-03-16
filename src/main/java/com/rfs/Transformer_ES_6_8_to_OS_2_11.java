@@ -1,5 +1,6 @@
 package com.rfs;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
@@ -13,6 +14,7 @@ public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
 
         System.out.println("Original Object: " + root.toString());
         removeIntermediateMappingsLevel(root);
+        removeIntermediateIndexSettingsLevel(root); // run before fixNumberOfReplicas
         fixNumberOfReplicas(root);
         System.out.println("Transformed Object: " + root.toString());
         
@@ -35,43 +37,59 @@ public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
      */ 
     private void removeIntermediateMappingsLevel(ObjectNode root) {        
         if (root.has("mappings")) {
-            ObjectNode mappingsRoot = (ObjectNode) root.get("mappings");
-
-            String[] subKeys = new String[] {"_doc", "doc"};
-            for (String subKey : subKeys) {
-                if (mappingsRoot.has(subKey)) {
-                    ObjectNode subNode = (ObjectNode) mappingsRoot.get(subKey);
-
-                    subNode.fieldNames().forEachRemaining(fieldName -> {
-                        mappingsRoot.set(fieldName, subNode.get(fieldName));
-                    });
-
-                    mappingsRoot.remove(subKey);
+            // Extract the mappings from their single-member list, will start like:
+            // [{"_doc":{"properties":{"address":{"type":"text"}}}}]
+            try {
+                ArrayNode mappingsList = (ArrayNode) root.get("mappings");
+                ObjectNode actualMappingsRoot = (ObjectNode) mappingsList.get(0);
+                if (actualMappingsRoot.has("_doc")) {
+                    root.set("mappings", (ObjectNode) actualMappingsRoot.get("_doc"));
+                } else if (actualMappingsRoot.has("doc")) {
+                    root.set("mappings", (ObjectNode) actualMappingsRoot.get("doc"));
                 }
+            } catch (ClassCastException e) {
+                // mappings isn't an array
+                return;
             }
+            
+            
         }
     }
     /**
      * If the object has settings, then we need to ensure they aren't burried underneath an intermediate key.
      * As an example, if we had settings.index.number_of_replicas, we need to make it settings.number_of_replicas.
      */ 
-    private void removeIntermediateIndexSettingsLevel(ObjectNode root) {        
+    private void removeIntermediateIndexSettingsLevel(ObjectNode root) {
+        // Remove the intermediate key "index" under "settings", will start like:
+        // {"index":{"number_of_shards":"1","number_of_replicas":"1"}}
         if (root.has("settings")) {
-            ObjectNode mappingsRoot = (ObjectNode) root.get("settings");
-
-            String[] subKeys = new String[] {"index"};
-            for (String subKey : subKeys) {
-                if (mappingsRoot.has(subKey)) {
-                    ObjectNode subNode = (ObjectNode) mappingsRoot.get(subKey);
-
-                    subNode.fieldNames().forEachRemaining(fieldName -> {
-                        mappingsRoot.set(fieldName, subNode.get(fieldName));
-                    });
-
-                    mappingsRoot.remove(subKey);
-                }
+            ObjectNode settingsRoot = (ObjectNode) root.get("settings");
+            if (settingsRoot.has("index")) {
+                ObjectNode indexSettingsRoot = (ObjectNode) settingsRoot.get("index");
+                settingsRoot.setAll(indexSettingsRoot);
+                settingsRoot.remove("index");
+                root.set("settings", settingsRoot);
             }
         }
+
+
+
+        // if (root.has("settings")) {
+        //     ObjectNode mappingsRoot = (ObjectNode) root.get("settings");
+
+        //     String[] subKeys = new String[] {"index"};
+        //     for (String subKey : subKeys) {
+        //         if (mappingsRoot.has(subKey)) {
+        //             ObjectNode subNode = (ObjectNode) mappingsRoot.get(subKey);
+
+        //             subNode.fieldNames().forEachRemaining(fieldName -> {
+        //                 mappingsRoot.set(fieldName, subNode.get(fieldName));
+        //             });
+
+        //             mappingsRoot.remove(subKey);
+        //         }
+        //     }
+        // }
     }
 
     /**

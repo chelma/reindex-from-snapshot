@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 
-public class SnapshotMetadataProvider {
+public class SnapshotMetadataFactory {
 
     public static SnapshotMetadata fromSnapshotRepoDataProvider(SnapshotRepoDataProvider repoDataProvider, String snapshotName) throws Exception {
         String snapshotId = repoDataProvider.getSnapshotId(snapshotName);

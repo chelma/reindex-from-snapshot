@@ -45,43 +45,43 @@ public class DemoRecreateIndices {
                 System.out.println("Snapshot not found");
                 return;
             }
-            SnapshotMetadata snapshotMetadata = SnapshotMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            SnapshotMetadata snapshotMetadata = SnapshotMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
             System.out.println("Snapshot data read successfully");
 
             // ==========================================================================================================
             // Read the Global Metadata
             // ==========================================================================================================
             System.out.println("Attempting to read Global Metadata details...");
-            GlobalMetadata globalMetadata = GlobalMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            GlobalMetadata globalMetadata = GlobalMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
             System.out.println("Global Metadata read successfully");
 
-            // // ==========================================================================================================
-            // // Recreate the Global Metadata
-            // // ==========================================================================================================
-            // System.out.println("Attempting to recreate the Global Metadata...");
-            // GlobalMetadataCreator.create(globalMetadataProvider, targetConnection, templateWhitelist, transformer);
+            // ==========================================================================================================
+            // Recreate the Global Metadata
+            // ==========================================================================================================
+            System.out.println("Attempting to recreate the Global Metadata...");
+            GlobalMetadataCreator.create(globalMetadata, targetConnection, templateWhitelist, transformer);
 
-            // // ==========================================================================================================
-            // // Read all the Index Metadata
-            // // ==========================================================================================================
-            // System.out.println("Attempting to read Index Metadata...");
-            // List<IndexMetadataProvider> indexMetadatas = new ArrayList<>();
-            // for (SnapshotRepoData.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
-            //     System.out.println("Reading Index Metadata for index: " + index.name);
-            //     IndexMetadataProvider indexMetadataProvider = IndexMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.name);
-            //     indexMetadatas.add(indexMetadataProvider);
-            // }
-            // System.out.println("Index Metadata read successfully");
+            // ==========================================================================================================
+            // Read all the Index Metadata
+            // ==========================================================================================================
+            System.out.println("Attempting to read Index Metadata...");
+            List<IndexMetadata> indexMetadatas = new ArrayList<>();
+            for (SnapshotRepoData.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
+                System.out.println("Reading Index Metadata for index: " + index.name);
+                IndexMetadata indexMetadata = IndexMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.name);
+                indexMetadatas.add(indexMetadata);
+            }
+            System.out.println("Index Metadata read successfully");
 
-            // // ==========================================================================================================
-            // // Recreate the indices
-            // // ==========================================================================================================
-            // System.out.println("Attempting to recreate the indices...");
-            // for (IndexMetadataProvider indexMetadata : indexMetadatas) {
-            //     String reindexName = indexMetadata.getName() + "_reindexed";
-            //     System.out.println("Recreating index " + indexMetadata.getName() + " as " + reindexName + " on target...");
-            //     IndexCreator.create(reindexName, indexMetadata, targetConnection, transformer);
-            // }
+            // ==========================================================================================================
+            // Recreate the indices
+            // ==========================================================================================================
+            System.out.println("Attempting to recreate the indices...");
+            for (IndexMetadata indexMetadata : indexMetadatas) {
+                String reindexName = indexMetadata.getName() + "_reindexed";
+                System.out.println("Recreating index " + indexMetadata.getName() + " as " + reindexName + " on target...");
+                IndexCreator.create(reindexName, indexMetadata, targetConnection, transformer);
+            }
             
         } catch (Exception e) {
             e.printStackTrace();
