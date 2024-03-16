@@ -14,12 +14,18 @@ import org.elasticsearch.ingest.IngestMetadata;
 import org.elasticsearch.persistent.PersistentTasksCustomMetaData;
 import org.elasticsearch.script.ScriptMetaData;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
+
 
 public class ElasticsearchConstants {
     public static final int BUFFER_SIZE_IN_BYTES;
     public static final Settings BUFFER_SETTINGS;
-    public static final  NamedXContentRegistry EMPTY_REGISTRY;
-    public static final  NamedXContentRegistry GLOBAL_METADATA_REGISTRY;
+    public static final NamedXContentRegistry EMPTY_REGISTRY;
+    public static final NamedXContentRegistry GLOBAL_METADATA_REGISTRY;
+    public static final SmileFactory SMILE_FACTORY;
 
     static {
         // https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/common/blobstore/fs/FsBlobStore.java#L49
@@ -42,6 +48,14 @@ public class ElasticsearchConstants {
         entries.add(new NamedXContentRegistry.Entry(MetaData.Custom.class, new ParseField(PersistentTasksCustomMetaData.TYPE),
             PersistentTasksCustomMetaData::fromXContent));
         GLOBAL_METADATA_REGISTRY = new NamedXContentRegistry(entries);
+
+        // Taken from: https://github.com/elastic/elasticsearch/blob/6.8/libs/x-content/src/main/java/org/elasticsearch/common/xcontent/smile/SmileXContent.java#L55
+        SmileFactory smileFactory = new SmileFactory();
+        smileFactory.configure(SmileGenerator.Feature.ENCODE_BINARY_AS_7BIT, false);
+        smileFactory.configure(SmileFactory.Feature.FAIL_ON_SYMBOL_HASH_OVERFLOW, false);
+        smileFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
+        smileFactory.configure(JsonParser.Feature.STRICT_DUPLICATE_DETECTION, false);
+        SMILE_FACTORY = smileFactory;
     }
     
 }

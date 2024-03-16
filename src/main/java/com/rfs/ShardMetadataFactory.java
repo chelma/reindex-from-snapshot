@@ -32,14 +32,7 @@ public class ShardMetadataFactory {
             int filePointer = (int) indexInput.getFilePointer();
             InputStream bis = new ByteArrayInputStream(bytes, filePointer, bytes.length - filePointer);
 
-            // Taken from: https://github.com/elastic/elasticsearch/blob/6.8/libs/x-content/src/main/java/org/elasticsearch/common/xcontent/smile/SmileXContent.java#L55
-            SmileFactory smileFactory = new SmileFactory();
-            smileFactory.configure(SmileGenerator.Feature.ENCODE_BINARY_AS_7BIT, false);
-            smileFactory.configure(SmileFactory.Feature.FAIL_ON_SYMBOL_HASH_OVERFLOW, false);
-            smileFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
-            smileFactory.configure(JsonParser.Feature.STRICT_DUPLICATE_DETECTION, false);
-            ObjectMapper smileMapper = new ObjectMapper(smileFactory);
-
+            ObjectMapper smileMapper = new ObjectMapper(ElasticsearchConstants.SMILE_FACTORY);
             JsonNode jsonNode = smileMapper.readTree(bis);
 
             return ShardMetadata.fromJsonNode(jsonNode, indexId, indexName, shardId);

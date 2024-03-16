@@ -2,8 +2,6 @@ package com.rfs;
 
 import java.util.List;
 
-import org.apache.logging.log4j.core.util.JsonUtils;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -31,16 +29,16 @@ public class ShardMetadata {
         );
     }
 
-    public final String snapshotName;
-    public final String indexName;
-    public final String indexId;
-    public final int shardId;
-    public final int indexVersion;
-    public final long startTime;
-    public final long time;
-    public final int numberOfFiles;
-    public final long totalSize;
-    public final List<FileMetadata> files;
+    private String snapshotName;
+    private String indexName;
+    private String indexId;
+    private int shardId;
+    private int indexVersion;
+    private long startTime;
+    private long time;
+    private int numberOfFiles;
+    private long totalSize;
+    private List<FileMetadata> files;
 
     public ShardMetadata(
             String snapshotName,
@@ -63,6 +61,46 @@ public class ShardMetadata {
         this.numberOfFiles = numberOfFiles;
         this.totalSize = totalSize;
         this.files = files;
+    }
+
+    public String getSnapshotName() {
+        return snapshotName;
+    }
+
+    public String getIndexName() {
+        return indexName;
+    }
+
+    public String getIndexId() {
+        return indexId;
+    }
+
+    public int getShardId() {
+        return shardId;
+    }
+
+    public int getIndexVersion() {
+        return indexVersion;
+    }
+
+    public long getStartTime() {
+        return startTime;
+    }
+
+    public long getTime() {
+        return time;
+    }
+
+    public int getNumberOfFiles() {
+        return numberOfFiles;
+    }
+
+    public long getTotalSize() {
+        return totalSize;
+    }
+
+    public List<FileMetadata> getFiles() {
+        return files;
     }
 
     @Override
@@ -103,30 +141,44 @@ public class ShardMetadata {
     }
 
     public static class FileMetadata {
-        public final String name;
-        public final String physicalName;
-        public final long length;
-        public final String checksum;
-        public final long partSize;
-        public final String writtenBy;
-        public final String metaHash;
+        private String name;
+        @JsonProperty("physical_name")
+        private String physicalName;
+        private long length;
+        private String checksum;
+        @JsonProperty("part_size")
+        private long partSize;
+        @JsonProperty("written_by")
+        private String writtenBy;
+        @JsonProperty("meta_hash")
+        private String metaHash;
 
-        @JsonCreator
-        public FileMetadata(
-                @JsonProperty("name") String name,
-                @JsonProperty("physical_name") String physicalName,
-                @JsonProperty("length") long length,
-                @JsonProperty("checksum") String checksum,
-                @JsonProperty("part_size") long partSize,
-                @JsonProperty("written_by") String writtenBy,
-                @JsonProperty("meta_hash") String metaHash) {
-            this.name = name;
-            this.physicalName = physicalName;
-            this.length = length;
-            this.checksum = checksum;
-            this.partSize = partSize;
-            this.writtenBy = writtenBy;
-            this.metaHash = metaHash;
+        public String getName() {
+            return name;
+        }
+
+        public String getPhysicalName() {
+            return physicalName;
+        }
+
+        public long getLength() {
+            return length;
+        }
+
+        public String getChecksum() {
+            return checksum;
+        }
+
+        public long getPartSize() {
+            return partSize;
+        }
+
+        public String getWrittenBy() {
+            return writtenBy;
+        }
+
+        public String getMetaHash() {
+            return metaHash;
         }
 
         @Override

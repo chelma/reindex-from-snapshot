@@ -8,12 +8,8 @@ import java.io.InputStream;
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.store.ByteArrayIndexInput;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 
 public class SnapshotMetadataFactory {
 
@@ -36,15 +32,9 @@ public class SnapshotMetadataFactory {
             int filePointer = (int) indexInput.getFilePointer();
             InputStream bis = new ByteArrayInputStream(bytes, filePointer, bytes.length - filePointer);
 
-            // Taken from: https://github.com/elastic/elasticsearch/blob/6.8/libs/x-content/src/main/java/org/elasticsearch/common/xcontent/smile/SmileXContent.java#L55
-            SmileFactory smileFactory = new SmileFactory();
-            smileFactory.configure(SmileGenerator.Feature.ENCODE_BINARY_AS_7BIT, false);
-            smileFactory.configure(SmileFactory.Feature.FAIL_ON_SYMBOL_HASH_OVERFLOW, false);
-            smileFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
-            smileFactory.configure(JsonParser.Feature.STRICT_DUPLICATE_DETECTION, false);
-            ObjectMapper smileMapper = new ObjectMapper(smileFactory);
-
+            ObjectMapper smileMapper = new ObjectMapper(ElasticsearchConstants.SMILE_FACTORY);
             JsonNode jsonNode = smileMapper.readTree(bis);
+
             return SnapshotMetadata.fromJsonNode(jsonNode);
         }
     }    
