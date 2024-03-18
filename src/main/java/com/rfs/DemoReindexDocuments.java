@@ -73,8 +73,8 @@ public class DemoReindexDocuments {
                     System.out.println("=== Shard ID: " + shardId + " ===");
 
                     // Get the shard metadata
-                    ShardMetadataProvider shardMetadata = ShardMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-                    SnapshotShardUnpacker.unpack(shardMetadata, luceneBasePath);                    
+                    ShardMetadata shardMetadata = ShardMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                    SnapshotShardUnpacker.unpackV2(shardMetadata, Paths.get(snapshotDirPath), luceneBasePath);
                 }
             }
 

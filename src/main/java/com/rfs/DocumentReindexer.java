@@ -1,7 +1,6 @@
 package com.rfs;
 
 import org.apache.lucene.document.Document;
-import org.elasticsearch.index.mapper.Uid;
 
 public class DocumentReindexer {
     public static void reindex(String indexName, Document document, ConnectionDetails targetConnection) throws Exception {

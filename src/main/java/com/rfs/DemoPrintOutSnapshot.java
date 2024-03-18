@@ -1,8 +1,5 @@
 package com.rfs;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -13,30 +10,9 @@ import java.util.List;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.store.IndexOutput;
-import org.apache.lucene.store.IOContext;
-import org.apache.lucene.store.NativeFSLockFactory;
 import org.apache.lucene.util.BytesRef;
-import org.elasticsearch.common.blobstore.BlobPath;
-import org.elasticsearch.common.blobstore.BlobContainer;
-import org.elasticsearch.common.blobstore.fs.FsBlobStore;
-import org.elasticsearch.index.mapper.Uid;
-import org.elasticsearch.index.snapshots.blobstore.BlobStoreIndexShardSnapshot;
-import org.elasticsearch.index.snapshots.blobstore.SlicedInputStream;
-
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
-import com.fasterxml.jackson.dataformat.smile.SmileParser;
-
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 
 public class DemoPrintOutSnapshot {
 
@@ -133,50 +109,15 @@ public class DemoPrintOutSnapshot {
             System.out.println("==================================================================");
             System.out.println("Unpacking blob files to disk...");
 
-            NativeFSLockFactory lockFactory = NativeFSLockFactory.INSTANCE;
-
             for (IndexMetadata indexMetadata : indexMetadatas.values()){
                 for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-                    ShardMetadataProvider shardMetadata = ShardMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-
-                    // Create the blob container
-                    BlobPath blobPath = new BlobPath().add(shardMetadata.getShardDirPath().toString());            
-                    FsBlobStore blobStore = new FsBlobStore(ElasticsearchConstants.BUFFER_SETTINGS, shardMetadata.getSnapshotDirPath(), false);
-                    BlobContainer container = blobStore.blobContainer(blobPath);
-                    
-                    // Create the directory for the shard's lucene files
-                    Path lucene_dir = Paths.get(luceneFilesBasePath + "/" + indexMetadata.getName() + "/" + shardId);
-                    Files.createDirectories(lucene_dir);
-                    final FSDirectory primaryDirectory = FSDirectory.open(lucene_dir, lockFactory);
-                    
-                    for (BlobStoreIndexShardSnapshot.FileInfo fileInfo : shardMetadata.getFiles()) {
-                        System.out.println("Unpacking - Blob Name: " + fileInfo.name() + ", Lucene Name: " + fileInfo.metadata().name());
-                        IndexOutput indexOutput = primaryDirectory.createOutput(fileInfo.metadata().name(), IOContext.DEFAULT);
-
-                        if (fileInfo.name().startsWith("v__")) {
-                            final BytesRef hash = fileInfo.metadata().hash();
-                            indexOutput.writeBytes(hash.bytes, hash.offset, hash.length);
-                        } else {
-                            try (InputStream stream = new SlicedInputStream(fileInfo.numberOfParts()) {
-                                @Override
-                                protected InputStream openSlice(long slice) throws IOException {
-                                    return container.readBlob(fileInfo.partName(slice));
-                                }
-                            }) {
-                                final byte[] buffer = new byte[Math.toIntExact(Math.min(ElasticsearchConstants.BUFFER_SIZE_IN_BYTES, fileInfo.length()))];
-                                int length;
-                                while ((length = stream.read(buffer)) > 0) {
-                                    indexOutput.writeBytes(buffer, 0, length);
-                                }
-                            }
-                        }
-                        blobStore.close();
-                        indexOutput.close();
-                    }
+                    ShardMetadata shardMetadata = ShardMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                    SnapshotShardUnpacker.unpackV2(shardMetadata, Paths.get(snapshotDirPath), Paths.get(luceneFilesBasePath));
 
                     // Now, read the documents back out
                     System.out.println("--- Reading docs in the shard ---");
-                    readDocumentsFromLuceneIndex(lucene_dir.toAbsolutePath().toString());
+                    Path luceneIndexDir = Paths.get(luceneFilesBasePath + "/" + shardMetadata.getIndexName() + "/" + shardMetadata.getShardId());
+                    readDocumentsFromLuceneIndex(luceneIndexDir);
                 }
 
             }
@@ -185,9 +126,9 @@ public class DemoPrintOutSnapshot {
         }
     }
 
-    private static void readDocumentsFromLuceneIndex(String indexDirectoryPath) throws Exception {
+    private static void readDocumentsFromLuceneIndex(Path indexDirectoryPath) throws Exception {
         // Opening the directory that contains the Lucene index
-        try (FSDirectory directory = FSDirectory.open(Paths.get(indexDirectoryPath));
+        try (FSDirectory directory = FSDirectory.open(indexDirectoryPath);
              IndexReader reader = DirectoryReader.open(directory)) {
 
             // Iterating over all documents in the index
@@ -203,8 +144,8 @@ public class DemoPrintOutSnapshot {
                 }              
 
                 // Iterate over all fields in the document
-                List<org.apache.lucene.index.IndexableField> fields = document.getFields();
-                for (org.apache.lucene.index.IndexableField field : fields) {
+                List<IndexableField> fields = document.getFields();
+                for (IndexableField field : fields) {
                     if ("_source".equals(field.name())){
                         String source_string = source_bytes.utf8ToString();
                         System.out.println("Field name: " + field.name() + ", Field value: " + source_string);
