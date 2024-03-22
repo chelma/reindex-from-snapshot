@@ -1,6 +1,7 @@
 package com.rfs.source_es_6_8;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rfs.common.SnapshotRepo;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,7 +13,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SnapshotRepoData {
+public class SnapshotRepoData_ES_6_8 {
     private static Path findRepoFile(Path dir) throws IOException {
         // The directory may contain multiple of these files, but we want the highest versioned one
         Pattern pattern = Pattern.compile("^index-(\\d+)$");
@@ -36,14 +37,14 @@ public class SnapshotRepoData {
         return highestVersionedFile;
     }
 
-    public static SnapshotRepoData fromRepoFile(Path filePath) throws IOException {
+    public static SnapshotRepoData_ES_6_8 fromRepoFile(Path filePath) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
-        SnapshotRepoData data = mapper.readValue(new File(filePath.toString()), SnapshotRepoData.class);
+        SnapshotRepoData_ES_6_8 data = mapper.readValue(new File(filePath.toString()), SnapshotRepoData_ES_6_8.class);
         data.filePath = filePath;
         return data;
     }
 
-    public static SnapshotRepoData fromRepoDir(Path dir) throws IOException {
+    public static SnapshotRepoData_ES_6_8 fromRepoDir(Path dir) throws IOException {
         Path file = findRepoFile(dir);
         if (file == null) {
             throw new IOException("No index file found in " + dir);
@@ -55,10 +56,18 @@ public class SnapshotRepoData {
     public List<Snapshot> snapshots;
     public Map<String, RawIndex> indices;
 
-    public static class Snapshot {
+    public static class Snapshot implements SnapshotRepo.Snapshot {
         public String name;
         public String uuid;
         public int state;
+
+        public String getName() {
+            return name;
+        }
+
+        public String getId() {
+            return uuid;
+        }
     }
 
     public static class RawIndex {
@@ -66,7 +75,7 @@ public class SnapshotRepoData {
         public List<String> snapshots;
     }
 
-    public static class Index {
+    public static class Index  implements SnapshotRepo.Index {
         public static Index fromRawIndex(String name, RawIndex rawIndex) {
             Index index = new Index();
             index.name = name;
@@ -78,6 +87,18 @@ public class SnapshotRepoData {
         public String name;
         public String id;
         public List<String> snapshots;
+
+        public String getName() {
+            return name;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public List<String> getSnapshots() {
+            return snapshots;
+        }
     }
 }
 

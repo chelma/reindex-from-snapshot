@@ -6,7 +6,7 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 
 
-public class ElasticsearchConstants {
+public class ElasticsearchConstants_ES_6_8 {
     public static final int BUFFER_SIZE_IN_BYTES;
     public static final SmileFactory SMILE_FACTORY;
 

@@ -35,7 +35,7 @@ public class SnapshotShardUnpacker {
                 indexOutput.writeBytes(hash.bytes, hash.offset, hash.length);
             } else {
                 try (InputStream stream = new PartSliceStream(shardDirPath, fileMetadata)) {
-                    final byte[] buffer = new byte[Math.toIntExact(Math.min(ElasticsearchConstants.BUFFER_SIZE_IN_BYTES, fileMetadata.getLength()))];
+                    final byte[] buffer = new byte[Math.toIntExact(Math.min(ElasticsearchConstants_ES_6_8.BUFFER_SIZE_IN_BYTES, fileMetadata.getLength()))];
                     int length;
                     while ((length = stream.read(buffer)) > 0) {
                         indexOutput.writeBytes(buffer, 0, length);

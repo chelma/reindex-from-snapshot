@@ -5,15 +5,16 @@ import java.util.List;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.rfs.common.ConnectionDetails;
+import com.rfs.common.GlobalMetadata;
 import com.rfs.common.RestClient;
 
 public class GlobalMetadataCreator {
-    public static void create(GlobalMetadata globalMetadata, ConnectionDetails connectionDetails, String[] templateWhitelist, Transformer transformer) throws Exception {
+    public static void create(GlobalMetadata.Data globalMetadata, ConnectionDetails connectionDetails, String[] templateWhitelist, Transformer transformer) throws Exception {
         System.out.println("Setting Global Metadata");
         createTemplates(globalMetadata, connectionDetails, templateWhitelist, transformer);
     }
 
-    public static void createTemplates(GlobalMetadata globalMetadata, ConnectionDetails connectionDetails, String[] templateWhitelist, Transformer transformer) throws Exception {
+    public static void createTemplates(GlobalMetadata.Data globalMetadata, ConnectionDetails connectionDetails, String[] templateWhitelist, Transformer transformer) throws Exception {
         System.out.println("Setting Component Templates");
 
         if (templateWhitelist != null) {

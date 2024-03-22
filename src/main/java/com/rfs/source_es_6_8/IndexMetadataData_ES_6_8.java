@@ -1,26 +1,17 @@
 package com.rfs.source_es_6_8;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-public class IndexMetadata {
+public class IndexMetadataData_ES_6_8 implements com.rfs.common.IndexMetadata.Data {
     private ObjectNode root;
     private ObjectNode mappings;
     private ObjectNode settings;
     private String indexId;
     private String indexName;
 
-    /*
-    Takes the raw JSON representation of an ES 6.8 index metadata file and makes it usable
-    */
-    public static IndexMetadata fromJsonNode(JsonNode root, String indexId, String indexName) throws Exception {
-        ObjectNode objectNodeRoot = (ObjectNode) root.get(indexName);
-        return new IndexMetadata(objectNodeRoot, indexId, indexName);
-    }
-
-    public IndexMetadata(ObjectNode root, String indexId, String indexName) {
+    public IndexMetadataData_ES_6_8(ObjectNode root, String indexId, String indexName) {
         this.root = root;
         this.mappings = null;
         this.settings = null;
@@ -48,10 +39,6 @@ public class IndexMetadata {
         mappings = mappingsNode;
 
         return mappings;
-    }
-
-    public ArrayNode getMappingsRaw() {
-        return (ArrayNode) root.get("mappings");
     }
 
     public String getName() {
@@ -89,9 +76,5 @@ public class IndexMetadata {
         settings = treeSettings;
 
         return settings;
-    }
-
-    public ObjectNode getSettingsRaw() {
-        return (ObjectNode) root.get("settings");
     }
 }

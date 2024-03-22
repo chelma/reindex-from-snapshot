@@ -2,11 +2,11 @@ package com.rfs.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.rfs.source_es_6_8.IndexMetadata;
+import com.rfs.source_es_6_8.IndexMetadataData_ES_6_8;
 import com.rfs.source_es_6_8.Transformer;
 
 public class IndexCreator {
-    public static void create(String targetName, IndexMetadata indexMetadata, ConnectionDetails connectionDetails, Transformer transformer) throws Exception {
+    public static void create(String targetName, IndexMetadataData_ES_6_8 indexMetadata, ConnectionDetails connectionDetails, Transformer transformer) throws Exception {
         // Remove some settings which will cause errors if you try to pass them to the API
         ObjectNode settings = indexMetadata.getSettings();
 

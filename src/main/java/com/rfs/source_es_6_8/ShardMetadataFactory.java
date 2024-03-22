@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rfs.common.ByteArrayIndexInput;
 
 public class ShardMetadataFactory {
-    public static ShardMetadata fromSnapshotRepoDataProvider(SnapshotRepoDataProvider repoDataProvider, String snapshotName, String indexName, int shardId) throws Exception {
+    public static ShardMetadata fromSnapshotRepoDataProvider(SnapshotRepoProvider_ES_6_8 repoDataProvider, String snapshotName, String indexName, int shardId) throws Exception {
         String snapshotId = repoDataProvider.getSnapshotId(snapshotName);        
         String indexId = repoDataProvider.getIndexId(indexName);
         String shardDirPath = repoDataProvider.getSnapshotDirPath() + "/indices/" + indexId + "/" + shardId;
@@ -28,7 +28,7 @@ public class ShardMetadataFactory {
             int filePointer = (int) indexInput.getFilePointer();
             InputStream bis = new ByteArrayInputStream(bytes, filePointer, bytes.length - filePointer);
 
-            ObjectMapper smileMapper = new ObjectMapper(ElasticsearchConstants.SMILE_FACTORY);
+            ObjectMapper smileMapper = new ObjectMapper(ElasticsearchConstants_ES_6_8.SMILE_FACTORY);
             JsonNode jsonNode = smileMapper.readTree(bis);
 
             return ShardMetadata.fromJsonNode(jsonNode, indexId, indexName, shardId);

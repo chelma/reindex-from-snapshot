@@ -1,29 +1,11 @@
-package com.rfs.source_es_6_8;
+package com.rfs.source_es_7_10;
 
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
-/**
- * The snapshot data; see [1]
- * 
- * [1] https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/snapshots/SnapshotInfo.java
- */
-public class SnapshotMetadata {
-    /**
-     * A version of the Elasticsearch approach simplified by assuming JSON; see here [1] for more details.
-     * 
-     * [1] https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/snapshots/SnapshotInfo.java#L583
-     */
-    public static SnapshotMetadata fromJsonNode(JsonNode root) throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode objectNodeRoot = (ObjectNode) root;
-        SnapshotMetadata snapshotMetadata = mapper.treeToValue(objectNodeRoot.get("snapshot"), SnapshotMetadata.class);
-        return snapshotMetadata;
-    }
+
+public class SnapshotMetadataData_ES_7_10 implements com.rfs.common.SnapshotMetadata.Data{
 
     private String name;
     private String uuid;
@@ -42,7 +24,11 @@ public class SnapshotMetadata {
     private int totalShards;
     @JsonProperty("successful_shards")
     private int successfulShards;
-    private List<?> failures; // Haven't looked at this yet
+    private List<?> failures; // Haven't looked into this yet
+    @JsonProperty("data_streams")
+    private List<?> dataStreams; // Haven't looked into this yet
+    @JsonProperty("metadata")
+    private Object metaData; // Haven't looked into this yet
 
     public String getName() {
         return name;

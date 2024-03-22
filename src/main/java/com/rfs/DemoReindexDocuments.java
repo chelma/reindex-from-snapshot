@@ -13,16 +13,18 @@ import com.beust.jcommander.Parameter;
 import com.rfs.common.ConnectionDetails;
 import com.rfs.common.DocumentReindexer;
 import com.rfs.common.LuceneDocumentsReader;
+import com.rfs.common.SnapshotMetadata;
+import com.rfs.common.SnapshotRepo;
 import com.rfs.common.SourceVersion;
-import com.rfs.source_es_6_8.IndexMetadata;
-import com.rfs.source_es_6_8.IndexMetadataFactory;
+import com.rfs.source_es_6_8.IndexMetadataData_ES_6_8;
+import com.rfs.source_es_6_8.IndexMetadataFactory_ES_6_8;
 import com.rfs.source_es_6_8.ShardMetadata;
 import com.rfs.source_es_6_8.ShardMetadataFactory;
-import com.rfs.source_es_6_8.SnapshotMetadata;
-import com.rfs.source_es_6_8.SnapshotMetadataFactory;
-import com.rfs.source_es_6_8.SnapshotRepoData;
-import com.rfs.source_es_6_8.SnapshotRepoDataProvider;
+import com.rfs.source_es_6_8.SnapshotRepoData_ES_6_8;
+import com.rfs.source_es_6_8.SnapshotRepoProvider_ES_6_8;
 import com.rfs.source_es_6_8.SnapshotShardUnpacker;
+import com.rfs.source_es_6_8.SnapshotMetadataData_ES_6_8;
+import com.rfs.source_es_6_8.SnapshotMetadataFactory_ES_6_8;
 
 
 public class DemoReindexDocuments {
@@ -78,7 +80,7 @@ public class DemoReindexDocuments {
             // Read the Repo data file
             // ==========================================================================================================
             System.out.println("Attempting to read Repo data file...");
-            SnapshotRepoDataProvider repoDataProvider = new SnapshotRepoDataProvider(Paths.get(snapshotDirPath));
+            SnapshotRepoProvider_ES_6_8 repoDataProvider = new SnapshotRepoProvider_ES_6_8(Paths.get(snapshotDirPath));
             System.out.println("Repo data read successfully");
 
             // ==========================================================================================================
@@ -91,62 +93,63 @@ public class DemoReindexDocuments {
                 System.out.println("Snapshot not found");
                 return;
             }
-            SnapshotMetadata snapshotMetadata = SnapshotMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            
+            SnapshotMetadata.Data snapshotMetadata = new SnapshotMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
             System.out.println("Snapshot data read successfully");
 
-            // ==========================================================================================================
-            // Read all the Index Metadata
-            // ==========================================================================================================
-            System.out.println("==================================================================");
-            System.out.println("Attempting to read Index Metadata...");
-            Map<String, IndexMetadata> indexMetadatas = new HashMap<>();
-            for (SnapshotRepoData.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
-                System.out.println("Reading Index Metadata for index: " + index.name);
-                IndexMetadata indexMetadata = IndexMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.name);
-                indexMetadatas.put(index.name, indexMetadata);
-            }
-            System.out.println("Index Metadata read successfully");
+            // // ==========================================================================================================
+            // // Read all the Index Metadata
+            // // ==========================================================================================================
+            // System.out.println("==================================================================");
+            // System.out.println("Attempting to read Index Metadata...");
+            // Map<String, IndexMetadataData_ES_6_8> indexMetadatas = new HashMap<>();
+            // for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
+            //     System.out.println("Reading Index Metadata for index: " + index.getName());
+            //     IndexMetadataData_ES_6_8 indexMetadata = IndexMetadataFactory_ES_6_8.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());
+            //     indexMetadatas.put(index.getName(), indexMetadata);
+            // }
+            // System.out.println("Index Metadata read successfully");
 
-            // ==========================================================================================================
-            // Unpack the snapshot blobs
-            // ==========================================================================================================
-            System.out.println("==================================================================");
-            System.out.println("Unpacking blob files to disk...");
+            // // ==========================================================================================================
+            // // Unpack the snapshot blobs
+            // // ==========================================================================================================
+            // System.out.println("==================================================================");
+            // System.out.println("Unpacking blob files to disk...");
 
-            for (IndexMetadata indexMetadata : indexMetadatas.values()) {
-                System.out.println("Processing index: " + indexMetadata.getName());
-                for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-                    System.out.println("=== Shard ID: " + shardId + " ===");
+            // for (IndexMetadataData_ES_6_8 indexMetadata : indexMetadatas.values()) {
+            //     System.out.println("Processing index: " + indexMetadata.getName());
+            //     for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
+            //         System.out.println("=== Shard ID: " + shardId + " ===");
 
-                    // Get the shard metadata
-                    ShardMetadata shardMetadata = ShardMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-                    SnapshotShardUnpacker.unpack(shardMetadata, Paths.get(snapshotDirPath), luceneBasePath);
-                }
-            }
+            //         // Get the shard metadata
+            //         ShardMetadata shardMetadata = ShardMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+            //         SnapshotShardUnpacker.unpack(shardMetadata, Paths.get(snapshotDirPath), luceneBasePath);
+            //     }
+            // }
 
-            System.out.println("Blob files unpacked successfully");
+            // System.out.println("Blob files unpacked successfully");
 
-            // ==========================================================================================================
-            // Reindex the documents
-            // ==========================================================================================================
-            System.out.println("==================================================================");
-            System.out.println("Reindexing the documents...");
+            // // ==========================================================================================================
+            // // Reindex the documents
+            // // ==========================================================================================================
+            // System.out.println("==================================================================");
+            // System.out.println("Reindexing the documents...");
 
-            for (IndexMetadata indexMetadata : indexMetadatas.values()) {
-                for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-                    System.out.println("=== Index Id: " + indexMetadata.getName() + ", Shard ID: " + shardId + " ===");
+            // for (IndexMetadataData_ES_6_8 indexMetadata : indexMetadatas.values()) {
+            //     for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
+            //         System.out.println("=== Index Id: " + indexMetadata.getName() + ", Shard ID: " + shardId + " ===");
 
-                    List<Document> documents = LuceneDocumentsReader.readDocuments(luceneBasePath, indexMetadata.getName(), shardId);
-                    System.out.println("Documents read successfully");
+            //         List<Document> documents = LuceneDocumentsReader.readDocuments(luceneBasePath, indexMetadata.getName(), shardId);
+            //         System.out.println("Documents read successfully");
 
-                    for (Document document : documents) {
-                        String targetIndex = indexMetadata.getName() + "_reindexed";
-                        DocumentReindexer.reindex(targetIndex, document, targetConnection);
-                    }
-                }
-            }
+            //         for (Document document : documents) {
+            //             String targetIndex = indexMetadata.getName() + "_reindexed";
+            //             DocumentReindexer.reindex(targetIndex, document, targetConnection);
+            //         }
+            //     }
+            // }
 
-            System.out.println("Documents reindexed successfully");
+            // System.out.println("Documents reindexed successfully");
             
         } catch (Exception e) {
             e.printStackTrace();
