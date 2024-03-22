@@ -8,9 +8,12 @@ import java.util.Map;
 
 import org.apache.lucene.document.Document;
 
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
 import com.rfs.common.ConnectionDetails;
 import com.rfs.common.DocumentReindexer;
 import com.rfs.common.LuceneDocumentsReader;
+import com.rfs.common.SourceVersion;
 import com.rfs.source_es_6_8.IndexMetadata;
 import com.rfs.source_es_6_8.IndexMetadataFactory;
 import com.rfs.source_es_6_8.ShardMetadata;
@@ -23,22 +26,52 @@ import com.rfs.source_es_6_8.SnapshotShardUnpacker;
 
 
 public class DemoReindexDocuments {
-    public static void main(String[] args) {
-        if (args.length < 6) {
-            System.out.println("Usage: java DemoReindexDocuments "
-                                + " <snapshot name> <absolute path to snapshot directory> <absolute path to dir where we'll put the lucene docs>"
-                                + " <target host and port (e.g. http://localhost:9200)> <target username> <target password>");
-            return;
-        }
 
-        String snapshotName = args[0];
-        String snapshotDirPath = args[1];
-        String luceneBasePathString = args[2];
-        String targetHost = args[3];
-        String targetUser = args[4];
-        String targetPass = args[5];
+    public static class Args {
+        @Parameter(names = {"-s", "--snapshot-name"}, description = "The name of the snapshot to read", required = true)
+        public String snapshotName;
+
+        @Parameter(names = {"-d", "--snapshot-dir"}, description = "The absolute path to the snapshot directory", required = true)
+        public String snapshotDirPath;
+
+        @Parameter(names = {"-l", "--lucene-dir"}, description = "The absolute path to the directory where we'll put the Lucene docs", required = true)
+        public String luceneBasePathString;
+
+        @Parameter(names = {"-t", "--target-host"}, description = "The target host and port (e.g. http://localhost:9200)", required = true)
+        public String targetHost;
+
+        @Parameter(names = {"-u", "--target-username"}, description = "The target username", required = true)
+        public String targetUser;
+
+        @Parameter(names = {"-p", "--target-password"}, description = "The target password", required = true)
+        public String targetPass;
+
+        @Parameter(names = {"-v", "--source-version"}, description = "Source version", required = true, converter = SourceVersion.ArgsConverter.class)
+        public SourceVersion sourceVersion;
+    }
+
+
+    public static void main(String[] args) {
+        Args arguments = new Args();
+        JCommander.newBuilder()
+            .addObject(arguments)
+            .build()
+            .parse(args);
+        
+        String snapshotName = arguments.snapshotName;
+        String snapshotDirPath = arguments.snapshotDirPath;
+        String luceneBasePathString = arguments.luceneBasePathString;
+        String targetHost = arguments.targetHost;
+        String targetUser = arguments.targetUser;
+        String targetPass = arguments.targetPass;
+        SourceVersion sourceVersion = arguments.sourceVersion;
         Path luceneBasePath = Paths.get(luceneBasePathString);
         ConnectionDetails targetConnection = new ConnectionDetails(targetHost, targetUser, targetPass);
+
+        if (sourceVersion != SourceVersion.ES_6_8) {
+            System.out.println("Only ES_6_8 is supported");
+            return;
+        }
 
         try {
             // ==========================================================================================================

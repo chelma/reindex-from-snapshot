@@ -4,8 +4,12 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
+
 import com.rfs.common.ConnectionDetails;
 import com.rfs.common.IndexCreator;
+import com.rfs.common.SourceVersion;
 import com.rfs.source_es_6_8.GlobalMetadata;
 import com.rfs.source_es_6_8.GlobalMetadataCreator;
 import com.rfs.source_es_6_8.GlobalMetadataFactory;
@@ -18,20 +22,46 @@ import com.rfs.source_es_6_8.SnapshotRepoDataProvider;
 import com.rfs.source_es_6_8.Transformer_to_OS_2_11;
 
 public class DemoRecreateIndices {
+    public static class Args {
+        @Parameter(names = {"-s", "--snapshot-name"}, description = "The name of the snapshot to read", required = true)
+        public String snapshotName;
+
+        @Parameter(names = {"-d", "--snapshot-dir"}, description = "The absolute path to the snapshot directory", required = true)
+        public String snapshotDirPath;
+
+        @Parameter(names = {"-t", "--target-host"}, description = "The target host and port (e.g. http://localhost:9200)", required = true)
+        public String targetHost;
+
+        @Parameter(names = {"-u", "--target-username"}, description = "The target username", required = true)
+        public String targetUser;
+
+        @Parameter(names = {"-p", "--target-password"}, description = "The target password", required = true)
+        public String targetPass;
+
+        @Parameter(names = {"-v", "--source-version"}, description = "Source version", required = true, converter = SourceVersion.ArgsConverter.class)
+        public SourceVersion sourceVersion;
+    }
+
+
     public static void main(String[] args) {
-        if (args.length < 5) {
-            System.out.println("Usage: java DemoRecreateIndices "
-                                + " <snapshot name> <absolute path to snapshot directory> "
-                                + " <target host and port (e.g. http://localhost:9200)> <target username> <target password>");
+        Args arguments = new Args();
+        JCommander.newBuilder()
+            .addObject(arguments)
+            .build()
+            .parse(args);
+        
+        String snapshotName = arguments.snapshotName;
+        String snapshotDirPath = arguments.snapshotDirPath;
+        String targetHost = arguments.targetHost;
+        String targetUser = arguments.targetUser;
+        String targetPass = arguments.targetPass;
+        SourceVersion sourceVersion = arguments.sourceVersion;
+        ConnectionDetails targetConnection = new ConnectionDetails(targetHost, targetUser, targetPass);
+
+        if (sourceVersion != SourceVersion.ES_6_8) {
+            System.out.println("Only ES_6_8 is supported");
             return;
         }
-
-        String snapshotName = args[0];
-        String snapshotDirPath = args[1];
-        String targetHost = args[2];
-        String targetUser = args[3];
-        String targetPass = args[4];
-        ConnectionDetails targetConnection = new ConnectionDetails(targetHost, targetUser, targetPass);
 
         // Should probably be passed in as an argument
         String[] templateWhitelist = {"posts_index_template"};

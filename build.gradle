@@ -11,6 +11,7 @@ repositories {
 }
 
 dependencies {
+    implementation 'com.beust:jcommander:1.81'
     implementation 'org.apache.lucene:lucene-core:8.7.0'
     implementation 'org.apache.lucene:lucene-analyzers-common:8.7.0'
     implementation 'org.apache.lucene:lucene-backward-codecs:8.7.0'

@@ -4,8 +4,11 @@ import java.nio.file.Paths;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
+
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
@@ -15,6 +18,7 @@ import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
 
 import com.rfs.common.Uid;
+import com.rfs.common.SourceVersion;
 import com.rfs.source_es_6_8.GlobalMetadata;
 import com.rfs.source_es_6_8.GlobalMetadataFactory;
 import com.rfs.source_es_6_8.IndexMetadata;
@@ -29,13 +33,36 @@ import com.rfs.source_es_6_8.SnapshotShardUnpacker;
 
 public class DemoPrintOutSnapshot {
 
-    public DemoPrintOutSnapshot() {}
+    public static class Args {
+        @Parameter(names = {"-s", "--snapshot-name"}, description = "The name of the snapshot to read", required = true)
+        public String snapshotName;
+
+        @Parameter(names = {"-d", "--snapshot-dir"}, description = "The absolute path to the snapshot directory", required = true)
+        public String snapshotDirPath;
+
+        @Parameter(names = {"-l", "--lucene-dir"}, description = "The absolute path to the directory where we'll put the Lucene docs", required = true)
+        public String luceneBasePathString;
+
+        @Parameter(names = {"-v", "--source-version"}, description = "Source version", required = true, converter = SourceVersion.ArgsConverter.class)
+        public SourceVersion sourceVersion;
+    }
 
     public static void main(String[] args) {
-        // Constants
-        String snapshotName = "global_state_snapshot";
-        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/6_8_Snapshots";        
-        String luceneFilesBasePath = "/tmp/lucene_files";
+        Args arguments = new Args();
+        JCommander.newBuilder()
+            .addObject(arguments)
+            .build()
+            .parse(args);
+        
+        String snapshotName = arguments.snapshotName;
+        String snapshotDirPath = arguments.snapshotDirPath;
+        String luceneBasePathString = arguments.luceneBasePathString;
+        SourceVersion sourceVersion = arguments.sourceVersion;
+
+        if (sourceVersion != SourceVersion.ES_6_8) {
+            System.out.println("Only ES_6_8 is supported");
+            return;
+        }
 
         try {
             // ==========================================================================================================
@@ -65,6 +92,7 @@ public class DemoPrintOutSnapshot {
             SnapshotMetadata snapshotMetadata = SnapshotMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
             System.out.println("Snapshot Metadata State: " + snapshotMetadata.getState());
             System.out.println("Snapshot Metadata State Reason: " + snapshotMetadata.getReason());
+            System.out.println("Snapshot Metadata Version: " + snapshotMetadata.getVersionId());
             System.out.println("Snapshot Metadata Indices: " + snapshotMetadata.getIndices());
             System.out.println("Snapshot Metadata Shards Total: " + snapshotMetadata.getTotalShards());
             System.out.println("Snapshot Metadata Shards Successful: " + snapshotMetadata.getSuccessfulShards());
@@ -125,11 +153,11 @@ public class DemoPrintOutSnapshot {
             for (IndexMetadata indexMetadata : indexMetadatas.values()){
                 for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
                     ShardMetadata shardMetadata = ShardMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-                    SnapshotShardUnpacker.unpack(shardMetadata, Paths.get(snapshotDirPath), Paths.get(luceneFilesBasePath));
+                    SnapshotShardUnpacker.unpack(shardMetadata, Paths.get(snapshotDirPath), Paths.get(luceneBasePathString));
 
                     // Now, read the documents back out
                     System.out.println("--- Reading docs in the shard ---");
-                    Path luceneIndexDir = Paths.get(luceneFilesBasePath + "/" + shardMetadata.getIndexName() + "/" + shardMetadata.getShardId());
+                    Path luceneIndexDir = Paths.get(luceneBasePathString + "/" + shardMetadata.getIndexName() + "/" + shardMetadata.getShardId());
                     readDocumentsFromLuceneIndex(luceneIndexDir);
                 }
 
