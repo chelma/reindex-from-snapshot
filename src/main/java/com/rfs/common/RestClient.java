@@ -1,4 +1,4 @@
-package com.rfs;
+package com.rfs.common;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;

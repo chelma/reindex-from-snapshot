@@ -1,4 +1,4 @@
-package com.rfs;
+package com.rfs.common;
 
 import java.util.Arrays;
 import java.util.Base64;

@@ -1,4 +1,4 @@
-package com.rfs;
+package com.rfs.source_es_6_8;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
@@ -12,7 +12,7 @@ public class ElasticsearchConstants {
 
     static {
         // https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/common/blobstore/fs/FsBlobStore.java#L49
-        BUFFER_SIZE_IN_BYTES = 102400; // Default buffer size
+        BUFFER_SIZE_IN_BYTES = 102400; // Default buffer sizeÍ
 
         // Taken from: https://github.com/elastic/elasticsearch/blob/6.8/libs/x-content/src/main/java/org/elasticsearch/common/xcontent/smile/SmileXContent.java#L55
         SmileFactory smileFactory = new SmileFactory();

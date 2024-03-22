@@ -4,6 +4,19 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.rfs.common.ConnectionDetails;
+import com.rfs.common.IndexCreator;
+import com.rfs.source_es_6_8.GlobalMetadata;
+import com.rfs.source_es_6_8.GlobalMetadataCreator;
+import com.rfs.source_es_6_8.GlobalMetadataFactory;
+import com.rfs.source_es_6_8.IndexMetadata;
+import com.rfs.source_es_6_8.IndexMetadataFactory;
+import com.rfs.source_es_6_8.SnapshotMetadata;
+import com.rfs.source_es_6_8.SnapshotMetadataFactory;
+import com.rfs.source_es_6_8.SnapshotRepoData;
+import com.rfs.source_es_6_8.SnapshotRepoDataProvider;
+import com.rfs.source_es_6_8.Transformer_to_OS_2_11;
+
 public class DemoRecreateIndices {
     public static void main(String[] args) {
         if (args.length < 5) {
@@ -25,7 +38,7 @@ public class DemoRecreateIndices {
 
         // Should determine the source, target versions programmatically.  The dimensionality is from the target I'm using
         // to test.
-        Transformer_ES_6_8_to_OS_2_11 transformer = new Transformer_ES_6_8_to_OS_2_11(3);
+        Transformer_to_OS_2_11 transformer = new Transformer_to_OS_2_11(3);
 
         try {
             // ==========================================================================================================

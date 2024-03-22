@@ -1,12 +1,12 @@
-package com.rfs;
+package com.rfs.source_es_6_8;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
+public class Transformer_to_OS_2_11 implements Transformer {
     private int awarenessAttributeDimensionality;
 
-    public Transformer_ES_6_8_to_OS_2_11(int awarenessAttributeDimensionality) {
+    public Transformer_to_OS_2_11(int awarenessAttributeDimensionality) {
         this.awarenessAttributeDimensionality = awarenessAttributeDimensionality;
     }
 

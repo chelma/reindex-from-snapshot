@@ -1,4 +1,4 @@
-package com.rfs;
+package com.rfs.source_es_6_8;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

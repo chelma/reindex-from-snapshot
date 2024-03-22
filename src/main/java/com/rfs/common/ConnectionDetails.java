@@ -1,4 +1,4 @@
-package com.rfs;
+package com.rfs.common;
 
 public class ConnectionDetails {
     public final String host;

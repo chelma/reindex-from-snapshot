@@ -14,6 +14,19 @@ import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
 
+import com.rfs.common.Uid;
+import com.rfs.source_es_6_8.GlobalMetadata;
+import com.rfs.source_es_6_8.GlobalMetadataFactory;
+import com.rfs.source_es_6_8.IndexMetadata;
+import com.rfs.source_es_6_8.IndexMetadataFactory;
+import com.rfs.source_es_6_8.ShardMetadata;
+import com.rfs.source_es_6_8.ShardMetadataFactory;
+import com.rfs.source_es_6_8.SnapshotMetadata;
+import com.rfs.source_es_6_8.SnapshotMetadataFactory;
+import com.rfs.source_es_6_8.SnapshotRepoData;
+import com.rfs.source_es_6_8.SnapshotRepoDataProvider;
+import com.rfs.source_es_6_8.SnapshotShardUnpacker;
+
 public class DemoPrintOutSnapshot {
 
     public DemoPrintOutSnapshot() {}
@@ -21,7 +34,7 @@ public class DemoPrintOutSnapshot {
     public static void main(String[] args) {
         // Constants
         String snapshotName = "global_state_snapshot";
-        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/distribution/build/cluster/shared/repo";        
+        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/6_8_Snapshots";        
         String luceneFilesBasePath = "/tmp/lucene_files";
 
         try {
@@ -112,7 +125,7 @@ public class DemoPrintOutSnapshot {
             for (IndexMetadata indexMetadata : indexMetadatas.values()){
                 for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
                     ShardMetadata shardMetadata = ShardMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-                    SnapshotShardUnpacker.unpackV2(shardMetadata, Paths.get(snapshotDirPath), Paths.get(luceneFilesBasePath));
+                    SnapshotShardUnpacker.unpack(shardMetadata, Paths.get(snapshotDirPath), Paths.get(luceneFilesBasePath));
 
                     // Now, read the documents back out
                     System.out.println("--- Reading docs in the shard ---");

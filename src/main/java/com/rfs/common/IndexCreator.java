@@ -1,7 +1,9 @@
-package com.rfs;
+package com.rfs.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.rfs.source_es_6_8.IndexMetadata;
+import com.rfs.source_es_6_8.Transformer;
 
 public class IndexCreator {
     public static void create(String targetName, IndexMetadata indexMetadata, ConnectionDetails connectionDetails, Transformer transformer) throws Exception {

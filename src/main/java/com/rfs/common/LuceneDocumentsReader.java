@@ -1,4 +1,4 @@
-package com.rfs;
+package com.rfs.common;
 
 import java.nio.file.Path;
 import java.util.ArrayList;

@@ -1,4 +1,4 @@
-package com.rfs;
+package com.rfs.source_es_6_8;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -11,8 +11,10 @@ import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.NativeFSLockFactory;
 import org.apache.lucene.util.BytesRef;
 
+import com.rfs.common.PartSliceStream;
+
 public class SnapshotShardUnpacker {
-    public static void unpackV2(ShardMetadata shardMetadata, Path snapshotBasePath, Path luceneFilesBasePath) throws Exception {
+    public static void unpack(ShardMetadata shardMetadata, Path snapshotBasePath, Path luceneFilesBasePath) throws Exception {
         // Some constants
         NativeFSLockFactory lockFactory = NativeFSLockFactory.INSTANCE;
 

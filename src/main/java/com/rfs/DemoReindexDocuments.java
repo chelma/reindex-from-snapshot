@@ -8,6 +8,19 @@ import java.util.Map;
 
 import org.apache.lucene.document.Document;
 
+import com.rfs.common.ConnectionDetails;
+import com.rfs.common.DocumentReindexer;
+import com.rfs.common.LuceneDocumentsReader;
+import com.rfs.source_es_6_8.IndexMetadata;
+import com.rfs.source_es_6_8.IndexMetadataFactory;
+import com.rfs.source_es_6_8.ShardMetadata;
+import com.rfs.source_es_6_8.ShardMetadataFactory;
+import com.rfs.source_es_6_8.SnapshotMetadata;
+import com.rfs.source_es_6_8.SnapshotMetadataFactory;
+import com.rfs.source_es_6_8.SnapshotRepoData;
+import com.rfs.source_es_6_8.SnapshotRepoDataProvider;
+import com.rfs.source_es_6_8.SnapshotShardUnpacker;
+
 
 public class DemoReindexDocuments {
     public static void main(String[] args) {
@@ -74,7 +87,7 @@ public class DemoReindexDocuments {
 
                     // Get the shard metadata
                     ShardMetadata shardMetadata = ShardMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-                    SnapshotShardUnpacker.unpackV2(shardMetadata, Paths.get(snapshotDirPath), luceneBasePath);
+                    SnapshotShardUnpacker.unpack(shardMetadata, Paths.get(snapshotDirPath), luceneBasePath);
                 }
             }
 

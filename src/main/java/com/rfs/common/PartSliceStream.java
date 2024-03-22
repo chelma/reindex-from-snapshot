@@ -1,9 +1,11 @@
-package com.rfs;
+package com.rfs.common;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import com.rfs.source_es_6_8.ShardMetadata;
 
 /*
  * Taken from Elasticsearch 6.8, combining the SlicedInputStream and PartSliceStream classes
@@ -19,7 +21,7 @@ public class PartSliceStream extends InputStream {
     private final Path shardDirPath;
     private final ShardMetadata.FileMetadata fileMetadata;
 
-    PartSliceStream(Path shardDirPath, ShardMetadata.FileMetadata fileMetadata) {
+    public PartSliceStream(Path shardDirPath, ShardMetadata.FileMetadata fileMetadata) {
         this.numSlices = fileMetadata.getNumberOfParts();
         this.fileMetadata = fileMetadata;
         this.shardDirPath = shardDirPath;

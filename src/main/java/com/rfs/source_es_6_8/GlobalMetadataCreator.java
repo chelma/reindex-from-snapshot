@@ -1,9 +1,11 @@
-package com.rfs;
+package com.rfs.source_es_6_8;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.rfs.common.ConnectionDetails;
+import com.rfs.common.RestClient;
 
 public class GlobalMetadataCreator {
     public static void create(GlobalMetadata globalMetadata, ConnectionDetails connectionDetails, String[] templateWhitelist, Transformer transformer) throws Exception {
