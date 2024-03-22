@@ -20,8 +20,10 @@ import org.apache.lucene.util.BytesRef;
 import com.rfs.common.Uid;
 import com.rfs.common.GlobalMetadata;
 import com.rfs.common.IndexMetadata;
+import com.rfs.common.ShardMetadata;
 import com.rfs.common.SnapshotMetadata;
 import com.rfs.common.SnapshotRepo;
+import com.rfs.common.SnapshotShardUnpacker;
 import com.rfs.common.SourceVersion;
 import com.rfs.source_es_6_8.*;
 import com.rfs.source_es_7_10.*;
@@ -172,40 +174,54 @@ public class DemoPrintOutSnapshot {
 
             System.out.println("Index Metadata read successfully");
 
-            // // ==========================================================================================================
-            // // Read the Index Shard Metadata for the Snapshot
-            // // ==========================================================================================================
-            // System.out.println("==================================================================");
-            // System.out.println("Attempting to read Index Shard Metadata...");
-            // for (IndexMetadata indexMetadata : indexMetadatas.values()) {
-            //     System.out.println("Reading Index Shard Metadata for index: " + indexMetadata.getName());
-            //     for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-            //         System.out.println("=== Shard ID: " + shardId + " ===");
+            // ==========================================================================================================
+            // Read the Index Shard Metadata for the Snapshot
+            // ==========================================================================================================
+            System.out.println("==================================================================");
+            System.out.println("Attempting to read Index Shard Metadata...");
+            for (IndexMetadata.Data indexMetadata : indexMetadatas.values()) {
+                System.out.println("Reading Index Shard Metadata for index: " + indexMetadata.getName());
+                for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
+                    System.out.println("=== Shard ID: " + shardId + " ===");
 
-            //         // Get the file mapping for the shard
-            //         ShardMetadata shardMetadata = ShardMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-            //         System.out.println("Shard Metadata: " + shardMetadata.toString());
-            //     }
-            // }
+                    // Get the file mapping for the shard
+                    ShardMetadata.Data shardMetadata;
+                    if (sourceVersion == SourceVersion.ES_6_8) {
+                        shardMetadata = new ShardMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                    } else if (sourceVersion == SourceVersion.ES_7_10) {
+                        shardMetadata = new ShardMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                    } else {
+                        throw new IllegalArgumentException("Unsupported source version: " + sourceVersion);
+                    }
+                    System.out.println("Shard Metadata: " + shardMetadata.toString());
+                }
+            }
 
-            // // ==========================================================================================================
-            // // Unpack the blob files
-            // // ==========================================================================================================
-            // System.out.println("==================================================================");
-            // System.out.println("Unpacking blob files to disk...");
+            // ==========================================================================================================
+            // Unpack the blob files
+            // ==========================================================================================================
+            System.out.println("==================================================================");
+            System.out.println("Unpacking blob files to disk...");
 
-            // for (IndexMetadata indexMetadata : indexMetadatas.values()){
-            //     for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-            //         ShardMetadata shardMetadata = ShardMetadataFactory.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-            //         SnapshotShardUnpacker.unpack(shardMetadata, Paths.get(snapshotDirPath), Paths.get(luceneBasePathString));
+            for (IndexMetadata.Data indexMetadata : indexMetadatas.values()){
+                for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
+                    ShardMetadata.Data shardMetadata;
+                    if (sourceVersion == SourceVersion.ES_6_8) {
+                        shardMetadata = new ShardMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                    } else if (sourceVersion == SourceVersion.ES_7_10) {
+                        shardMetadata = new ShardMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                    } else {
+                        throw new IllegalArgumentException("Unsupported source version: " + sourceVersion);
+                    }
+                    SnapshotShardUnpacker.unpack(shardMetadata, Paths.get(snapshotDirPath), Paths.get(luceneBasePathString));
 
-            //         // Now, read the documents back out
-            //         System.out.println("--- Reading docs in the shard ---");
-            //         Path luceneIndexDir = Paths.get(luceneBasePathString + "/" + shardMetadata.getIndexName() + "/" + shardMetadata.getShardId());
-            //         readDocumentsFromLuceneIndex(luceneIndexDir);
-            //     }
+                    // Now, read the documents back out
+                    System.out.println("--- Reading docs in the shard ---");
+                    Path luceneIndexDir = Paths.get(luceneBasePathString + "/" + shardMetadata.getIndexName() + "/" + shardMetadata.getShardId());
+                    readDocumentsFromLuceneIndex(luceneIndexDir);
+                }
 
-            // }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -5,8 +5,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import com.rfs.source_es_6_8.ShardMetadata;
-
 /*
  * Taken from Elasticsearch 6.8, combining the SlicedInputStream and PartSliceStream classes
  * See: https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/index/snapshots/blobstore/SlicedInputStream.java
@@ -19,9 +17,9 @@ public class PartSliceStream extends InputStream {
     private final long numSlices;
     private boolean initialized = false;
     private final Path shardDirPath;
-    private final ShardMetadata.FileMetadata fileMetadata;
+    private final ShardMetadata.FileInfo fileMetadata;
 
-    public PartSliceStream(Path shardDirPath, ShardMetadata.FileMetadata fileMetadata) {
+    public PartSliceStream(Path shardDirPath, ShardMetadata.FileInfo fileMetadata) {
         this.numSlices = fileMetadata.getNumberOfParts();
         this.fileMetadata = fileMetadata;
         this.shardDirPath = shardDirPath;

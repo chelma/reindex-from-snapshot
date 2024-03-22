@@ -1,4 +1,4 @@
-package com.rfs.source_es_6_8;
+package com.rfs.common;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -11,10 +11,10 @@ import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.NativeFSLockFactory;
 import org.apache.lucene.util.BytesRef;
 
-import com.rfs.common.PartSliceStream;
+import com.rfs.source_es_6_8.ElasticsearchConstants_ES_6_8;
 
 public class SnapshotShardUnpacker {
-    public static void unpack(ShardMetadata shardMetadata, Path snapshotBasePath, Path luceneFilesBasePath) throws Exception {
+    public static void unpack(ShardMetadata.Data shardMetadata, Path snapshotBasePath, Path luceneFilesBasePath) throws Exception {
         // Some constants
         NativeFSLockFactory lockFactory = NativeFSLockFactory.INSTANCE;
 
@@ -26,7 +26,7 @@ public class SnapshotShardUnpacker {
         Files.createDirectories(luceneIndexDir);
         final FSDirectory primaryDirectory = FSDirectory.open(luceneIndexDir, lockFactory);
 
-        for (ShardMetadata.FileMetadata fileMetadata : shardMetadata.getFiles()) {
+        for (ShardMetadata.FileInfo fileMetadata : shardMetadata.getFiles()) {
             System.out.println("Unpacking - Blob Name: " + fileMetadata.getName() + ", Lucene Name: " + fileMetadata.getPhysicalName());
             IndexOutput indexOutput = primaryDirectory.createOutput(fileMetadata.getPhysicalName(), IOContext.DEFAULT);
 

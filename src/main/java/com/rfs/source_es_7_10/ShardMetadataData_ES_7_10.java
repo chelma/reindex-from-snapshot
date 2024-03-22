@@ -1,33 +1,15 @@
-package com.rfs.source_es_6_8;
+package com.rfs.source_es_7_10;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.rfs.common.ShardMetadata;
 
-
-public class ShardMetadata {
+public class ShardMetadataData_ES_7_10 implements ShardMetadata.Data {
     private static final ObjectMapper objectMapper = new ObjectMapper();
-
-    public static ShardMetadata fromJsonNode(JsonNode root, String indexId, String indexName, int shardId) throws Exception {
-        ObjectNode objectNodeRoot = (ObjectNode) root;
-        ShardMetadataRaw shardMetadataRaw = objectMapper.treeToValue(objectNodeRoot, ShardMetadataRaw.class);
-        return new ShardMetadata(
-                shardMetadataRaw.name,
-                indexName,
-                indexId,
-                shardId,
-                shardMetadataRaw.indexVersion,
-                shardMetadataRaw.startTime,
-                shardMetadataRaw.time,
-                shardMetadataRaw.numberOfFiles,
-                shardMetadataRaw.totalSize,
-                shardMetadataRaw.files
-        );
-    }
 
     private String snapshotName;
     private String indexName;
@@ -38,9 +20,9 @@ public class ShardMetadata {
     private long time;
     private int numberOfFiles;
     private long totalSize;
-    private List<FileMetadata> files;
+    private List<FileInfo> files;
 
-    public ShardMetadata(
+    public ShardMetadataData_ES_7_10(
             String snapshotName,
             String indexName,
             String indexId,
@@ -50,7 +32,7 @@ public class ShardMetadata {
             long time,
             int numberOfFiles,
             long totalSize,
-            List<FileMetadataRaw> files) {
+            List<FileInfoRaw> files) {
         this.snapshotName = snapshotName;
         this.indexName = indexName;
         this.indexId = indexId;
@@ -62,9 +44,9 @@ public class ShardMetadata {
         this.totalSize = totalSize;
 
         // Convert the raw file metadata to the FileMetadata class
-        List<FileMetadata> convertedFiles = new java.util.ArrayList<>();
-        for (FileMetadataRaw fileMetadataRaw : files) {
-            convertedFiles.add(FileMetadata.fromFileMetadataRaw(fileMetadataRaw));
+        List<FileInfo> convertedFiles = new java.util.ArrayList<>();
+        for (FileInfoRaw fileMetadataRaw : files) {
+            convertedFiles.add(FileInfo.fromFileMetadataRaw(fileMetadataRaw));
         }
         this.files = convertedFiles;
     }
@@ -105,8 +87,9 @@ public class ShardMetadata {
         return totalSize;
     }
 
-    public List<FileMetadata> getFiles() {
-        return files;
+    public List<ShardMetadata.FileInfo> getFiles() {
+        List<ShardMetadata.FileInfo> convertedFiles = new ArrayList<>(files);
+        return convertedFiles;
     }
 
     @Override
@@ -118,24 +101,24 @@ public class ShardMetadata {
         }
     }
 
-    private static class ShardMetadataRaw {
+    public static class DataRaw {
         public final String name;
         public final int indexVersion;
         public final long startTime;
         public final long time;
         public final int numberOfFiles;
         public final long totalSize;
-        public final List<FileMetadataRaw> files;
+        public final List<FileInfoRaw> files;
 
         @JsonCreator
-        public ShardMetadataRaw(
+        public DataRaw(
                 @JsonProperty("name") String name,
                 @JsonProperty("index_version") int indexVersion,
                 @JsonProperty("start_time") long startTime,
                 @JsonProperty("time") long time,
                 @JsonProperty("number_of_files") int numberOfFiles,
                 @JsonProperty("total_size") long totalSize,
-                @JsonProperty("files") List<FileMetadataRaw> files) {
+                @JsonProperty("files") List<FileInfoRaw> files) {
             this.name = name;
             this.indexVersion = indexVersion;
             this.startTime = startTime;
@@ -146,7 +129,7 @@ public class ShardMetadata {
         }
     }
 
-    public static class FileMetadata {
+    public static class FileInfo implements ShardMetadata.FileInfo {
         private String name;
         private String physicalName;
         private long length;
@@ -156,8 +139,8 @@ public class ShardMetadata {
         private String writtenBy;
         private String metaHash;
 
-        public static FileMetadata fromFileMetadataRaw(FileMetadataRaw fileMetadataRaw) {
-            return new FileMetadata(
+        public static FileInfo fromFileMetadataRaw(FileInfoRaw fileMetadataRaw) {
+            return new FileInfo(
                     fileMetadataRaw.name,
                     fileMetadataRaw.physicalName,
                     fileMetadataRaw.length,
@@ -168,7 +151,7 @@ public class ShardMetadata {
             );
         }
 
-        public FileMetadata(
+        public FileInfo(
                 String name,
                 String physicalName,
                 long length,
@@ -253,7 +236,7 @@ public class ShardMetadata {
         }
     }
 
-    private static class FileMetadataRaw {
+    public static class FileInfoRaw {
         public final String name;
         public final String physicalName;
         public final long length;
@@ -263,7 +246,7 @@ public class ShardMetadata {
         public final String metaHash;
 
         @JsonCreator
-        public FileMetadataRaw(
+        public FileInfoRaw(
                 @JsonProperty("name") String name,
                 @JsonProperty("physical_name") String physicalName,
                 @JsonProperty("length") long length,

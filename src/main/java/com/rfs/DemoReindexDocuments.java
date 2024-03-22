@@ -15,14 +15,14 @@ import com.rfs.common.DocumentReindexer;
 import com.rfs.common.LuceneDocumentsReader;
 import com.rfs.common.SnapshotMetadata;
 import com.rfs.common.SnapshotRepo;
+import com.rfs.common.SnapshotShardUnpacker;
 import com.rfs.common.SourceVersion;
 import com.rfs.source_es_6_8.IndexMetadataData_ES_6_8;
 import com.rfs.source_es_6_8.IndexMetadataFactory_ES_6_8;
-import com.rfs.source_es_6_8.ShardMetadata;
-import com.rfs.source_es_6_8.ShardMetadataFactory;
+import com.rfs.source_es_6_8.ShardMetadataData_ES_6_8;
+import com.rfs.source_es_6_8.ShardMetadataFactory_ES_6_8;
 import com.rfs.source_es_6_8.SnapshotRepoData_ES_6_8;
 import com.rfs.source_es_6_8.SnapshotRepoProvider_ES_6_8;
-import com.rfs.source_es_6_8.SnapshotShardUnpacker;
 import com.rfs.source_es_6_8.SnapshotMetadataData_ES_6_8;
 import com.rfs.source_es_6_8.SnapshotMetadataFactory_ES_6_8;
 

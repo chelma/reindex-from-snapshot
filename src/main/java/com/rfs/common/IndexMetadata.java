@@ -14,7 +14,7 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 
 public class IndexMetadata {
     public static interface Factory {
-        private JsonNode getJsonNode(SnapshotRepo.Provider repoDataProvider, String snapshotName, String indexId, String indexFileId, SmileFactory smileFactory) throws Exception {
+        private JsonNode getJsonNode(SnapshotRepo.Provider repoDataProvider, String indexId, String indexFileId, SmileFactory smileFactory) throws Exception {
             String indexDirPath = repoDataProvider.getSnapshotDirPath() + "/indices/" + indexId;
             String filePath = indexDirPath + "/meta-" + indexFileId + ".dat";
     
@@ -37,7 +37,7 @@ public class IndexMetadata {
             SmileFactory smileFactory = getSmileFactory();
             String indexId = repoDataProvider.getIndexId(indexName);
             String indexFileId = getIndexFileId(repoDataProvider, snapshotName, indexName);
-            JsonNode root = getJsonNode(repoDataProvider, snapshotName, indexId, indexFileId, smileFactory);            
+            JsonNode root = getJsonNode(repoDataProvider, indexId, indexFileId, smileFactory);            
             return fromJsonNode(root, indexId, indexName);
         }
         public IndexMetadata.Data fromJsonNode(JsonNode root, String indexId, String indexName) throws Exception;
