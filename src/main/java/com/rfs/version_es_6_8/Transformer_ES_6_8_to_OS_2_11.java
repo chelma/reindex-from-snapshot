@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.rfs.common.Transformer;
 
 public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
-    private static final ObjectMapper mapper = new ObjectMapper();    
+    private static final ObjectMapper mapper = new ObjectMapper();
     private int awarenessAttributeDimensionality;
 
     public Transformer_ES_6_8_to_OS_2_11(int awarenessAttributeDimensionality) {
@@ -21,19 +21,32 @@ public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
         ObjectNode templatesRoot = (ObjectNode) root.get("templates").deepCopy();
         templatesRoot.fieldNames().forEachRemaining(templateName -> {
             ObjectNode template = (ObjectNode) templatesRoot.get(templateName);
+            System.out.println("Transforming template: " + templateName);
+            System.out.println("Original template: " + template.toString());
             removeIntermediateMappingsLevel(template);
             removeIntermediateIndexSettingsLevel(template); // run before fixNumberOfReplicas
             fixNumberOfReplicas(template);
+            System.out.println("Transformed template: " + template.toString());
             templatesRoot.set(templateName, template);
         });
         newRoot.set("templates", templatesRoot);
 
-        System.out.println("Original Object: " + root.toString());
-        System.out.println("Transformed Object: " + newRoot.toString());
+        // Make empty index_templates
+        ObjectNode indexTemplatesRoot = mapper.createObjectNode();
+        ObjectNode indexTemplatesSubRoot = mapper.createObjectNode();
+        indexTemplatesRoot.set("index_template", indexTemplatesSubRoot);
+        newRoot.set("index_template", indexTemplatesRoot);
+
+        // Make empty component_templates
+        ObjectNode componentTemplatesRoot = mapper.createObjectNode();
+        ObjectNode componentTemplatesSubRoot = mapper.createObjectNode();
+        componentTemplatesRoot.set("component_template", componentTemplatesSubRoot);
+        newRoot.set("component_template", componentTemplatesRoot);
+
         return newRoot;
     }
 
-    public ObjectNode transformIndexMetadata(ObjectNode root){        
+    public ObjectNode transformIndexMetadata(ObjectNode root){
         ObjectNode newRoot = root.deepCopy();
 
         removeIntermediateMappingsLevel(newRoot);
@@ -67,6 +80,7 @@ public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
             }            
         }
     }
+
     /**
      * If the object has settings, then we need to ensure they aren't burried underneath an intermediate key.
      * As an example, if we had settings.index.number_of_replicas, we need to make it settings.number_of_replicas.

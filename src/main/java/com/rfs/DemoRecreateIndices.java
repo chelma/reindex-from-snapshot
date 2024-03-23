@@ -77,7 +77,12 @@ public class DemoRecreateIndices {
             // Read the Repo data file
             // ==========================================================================================================
             System.out.println("Attempting to read Repo data file...");
-            SnapshotRepo.Provider repoDataProvider = new SnapshotRepoProvider_ES_6_8(Paths.get(snapshotDirPath));
+            SnapshotRepo.Provider repoDataProvider;
+            if (sourceVersion == ClusterVersion.ES_6_8) {
+                repoDataProvider = new SnapshotRepoProvider_ES_6_8(Paths.get(snapshotDirPath));
+            } else {
+                repoDataProvider = new SnapshotRepoProvider_ES_7_10(Paths.get(snapshotDirPath));
+            }
             System.out.println("Repo data read successfully");
 
             // // ==========================================================================================================
@@ -90,14 +95,24 @@ public class DemoRecreateIndices {
                 System.out.println("Snapshot not found");
                 return;
             }
-            SnapshotMetadata.Data snapshotMetadata = new SnapshotMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            SnapshotMetadata.Data snapshotMetadata;
+            if (sourceVersion == ClusterVersion.ES_6_8) {
+                snapshotMetadata = new SnapshotMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            } else {
+                snapshotMetadata = new SnapshotMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            }
             System.out.println("Snapshot data read successfully");
 
             // ==========================================================================================================
             // Read the Global Metadata
             // ==========================================================================================================
             System.out.println("Attempting to read Global Metadata details...");
-            GlobalMetadata.Data globalMetadata = new GlobalMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            GlobalMetadata.Data globalMetadata;
+            if (sourceVersion == ClusterVersion.ES_6_8) {
+                globalMetadata = new GlobalMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            } else {
+                globalMetadata = new GlobalMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            }
             System.out.println("Global Metadata read successfully");
 
             // ==========================================================================================================
