@@ -31,7 +31,7 @@ public class SnapshotShardUnpacker {
             IndexOutput indexOutput = primaryDirectory.createOutput(fileMetadata.getPhysicalName(), IOContext.DEFAULT);
 
             if (fileMetadata.getName().startsWith("v__")) {
-                final BytesRef hash = new BytesRef(fileMetadata.getChecksum());
+                final BytesRef hash = fileMetadata.getMetaHash();
                 indexOutput.writeBytes(hash.bytes, hash.offset, hash.length);
             } else {
                 try (InputStream stream = new PartSliceStream(shardDirPath, fileMetadata)) {

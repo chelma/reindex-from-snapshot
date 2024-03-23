@@ -148,7 +148,7 @@ public class DemoPrintOutSnapshot {
             System.out.println("==================================================================");
             System.out.println("Attempting to read Index Metadata...");
 
-            Map<String, IndexMetadata.Data> indexMetadatas = new HashMap<>();;
+            Map<String, IndexMetadata.Data> indexMetadatas = new HashMap<>();
             if (sourceVersion == SourceVersion.ES_6_8) {
                 for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
                     IndexMetadata.Data indexMetadata = new IndexMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());

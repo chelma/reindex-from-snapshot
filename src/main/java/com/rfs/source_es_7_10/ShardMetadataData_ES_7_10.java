@@ -1,10 +1,18 @@
 package com.rfs.source_es_7_10;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.lucene.util.BytesRef;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rfs.common.ShardMetadata;
 
@@ -137,7 +145,7 @@ public class ShardMetadataData_ES_7_10 implements ShardMetadata.Data {
         private long partSize;
         private long numberOfParts;
         private String writtenBy;
-        private String metaHash;
+        private BytesRef metaHash;
 
         public static FileInfo fromFileMetadataRaw(FileInfoRaw fileMetadataRaw) {
             return new FileInfo(
@@ -158,7 +166,7 @@ public class ShardMetadataData_ES_7_10 implements ShardMetadata.Data {
                 String checksum,
                 long partSize,
                 String writtenBy,
-                String metaHash) {
+                BytesRef metaHash) {
             this.name = name;
             this.physicalName = physicalName;
             this.length = length;
@@ -209,7 +217,7 @@ public class ShardMetadataData_ES_7_10 implements ShardMetadata.Data {
             return writtenBy;
         }
 
-        public String getMetaHash() {
+        public BytesRef getMetaHash() {
             return metaHash;
         }
 
@@ -243,17 +251,16 @@ public class ShardMetadataData_ES_7_10 implements ShardMetadata.Data {
         public final String checksum;
         public final long partSize;
         public final String writtenBy;
-        public final String metaHash;
+        public final BytesRef metaHash;
 
-        @JsonCreator
         public FileInfoRaw(
-                @JsonProperty("name") String name,
-                @JsonProperty("physical_name") String physicalName,
-                @JsonProperty("length") long length,
-                @JsonProperty("checksum") String checksum,
-                @JsonProperty("part_size") long partSize,
-                @JsonProperty("written_by") String writtenBy,
-                @JsonProperty("meta_hash") String metaHash) {
+                String name,
+                String physicalName,
+                long length,
+                String checksum,
+                long partSize,
+                String writtenBy,
+                BytesRef metaHash) {
             this.name = name;
             this.physicalName = physicalName;
             this.length = length;
@@ -261,6 +268,32 @@ public class ShardMetadataData_ES_7_10 implements ShardMetadata.Data {
             this.partSize = partSize;
             this.writtenBy = writtenBy;
             this.metaHash = metaHash;
+        }
+    }
+
+    public static class FileInfoRawDeserializer extends JsonDeserializer<FileInfoRaw> {
+        @Override
+        public FileInfoRaw deserialize(JsonParser jp, DeserializationContext ctxt)
+                throws IOException, JsonProcessingException {
+                    
+            JsonNode rootNode = jp.getCodec().readTree(jp);
+            
+            String name = rootNode.get("name").asText();
+            String physicalName = rootNode.get("physical_name").asText();
+            long length = rootNode.get("length").asLong();
+            String checksum = rootNode.get("checksum").asText();
+            long partSize = rootNode.get("part_size").asLong();
+            String writtenBy = rootNode.get("written_by").asText();
+            
+            BytesRef metaHash = null;
+            if (rootNode.has("meta_hash")) {
+                metaHash = new BytesRef();
+                metaHash.bytes = rootNode.get("meta_hash").binaryValue();
+                metaHash.offset = 0;
+                metaHash.length = metaHash.bytes.length;
+            }
+            
+            return new FileInfoRaw(name, physicalName, length, checksum, partSize, writtenBy, metaHash);
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.rfs.common;
 
 import org.apache.lucene.codecs.CodecUtil;
+import org.apache.lucene.util.BytesRef;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -64,7 +65,7 @@ public class ShardMetadata {
         public String getChecksum();
         public long getPartSize();
         public String getWrittenBy();
-        public String getMetaHash();
+        public BytesRef getMetaHash();
         public long getNumberOfParts();
         public String partName(long part);
     }
