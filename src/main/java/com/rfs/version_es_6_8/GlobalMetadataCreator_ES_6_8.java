@@ -1,29 +1,28 @@
-package com.rfs.source_es_6_8;
+package com.rfs.version_es_6_8;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.rfs.common.ConnectionDetails;
-import com.rfs.common.GlobalMetadata;
 import com.rfs.common.RestClient;
 
-public class GlobalMetadataCreator {
-    public static void create(GlobalMetadata.Data globalMetadata, ConnectionDetails connectionDetails, String[] templateWhitelist, Transformer transformer) throws Exception {
+public class GlobalMetadataCreator_ES_6_8 {
+    public static void create(ObjectNode root, ConnectionDetails connectionDetails, String[] templateWhitelist) throws Exception {
         System.out.println("Setting Global Metadata");
-        createTemplates(globalMetadata, connectionDetails, templateWhitelist, transformer);
+
+        GlobalMetadataData_ES_6_8 globalMetadata = new GlobalMetadataData_ES_6_8(root);
+        createTemplates(globalMetadata, connectionDetails, templateWhitelist);
     }
 
-    public static void createTemplates(GlobalMetadata.Data globalMetadata, ConnectionDetails connectionDetails, String[] templateWhitelist, Transformer transformer) throws Exception {
-        System.out.println("Setting Component Templates");
+    public static void createTemplates(GlobalMetadataData_ES_6_8 globalMetadata, ConnectionDetails connectionDetails, String[] templateWhitelist) throws Exception {
+        System.out.println("Setting Templates");
 
         if (templateWhitelist != null) {
             for (String templateName : templateWhitelist) {
                 System.out.println("Setting Template: " + templateName);
                 ObjectNode settings = (ObjectNode) globalMetadata.getTemplates().get(templateName);
-
-                ObjectNode transformedSettings = transformer.transformTemplateBody(settings);
-                createTemplate(templateName, transformedSettings, connectionDetails);
+                createTemplate(templateName, settings, connectionDetails);
             }
         } else {
             // Get the template names
@@ -35,10 +34,9 @@ public class GlobalMetadataCreator {
             for (String templateName : templateKeys) {
                 System.out.println("Setting Template: " + templateName);
                 ObjectNode settings = (ObjectNode) templates.get(templateName);
-                ObjectNode transformedSettings = transformer.transformTemplateBody(settings);
-                createTemplate(templateName, transformedSettings, connectionDetails);
-            }            
-        }        
+                createTemplate(templateName, settings, connectionDetails);
+            }
+        }
     }
 
     private static void createTemplate(String templateName, ObjectNode settings, ConnectionDetails connectionDetails) throws Exception {

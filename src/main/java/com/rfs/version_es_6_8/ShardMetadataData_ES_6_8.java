@@ -1,4 +1,4 @@
-package com.rfs.source_es_6_8;
+package com.rfs.version_es_6_8;
 
 import java.io.IOException;
 import java.util.ArrayList;

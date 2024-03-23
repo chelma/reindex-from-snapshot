@@ -1,4 +1,4 @@
-package com.rfs.source_es_7_10;
+package com.rfs.version_es_7_10;
 
 import java.io.IOException;
 import java.nio.file.Path;

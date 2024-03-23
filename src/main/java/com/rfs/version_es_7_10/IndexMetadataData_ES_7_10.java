@@ -1,4 +1,4 @@
-package com.rfs.source_es_7_10;
+package com.rfs.version_es_7_10;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;

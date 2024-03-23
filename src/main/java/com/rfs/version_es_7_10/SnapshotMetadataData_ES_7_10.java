@@ -1,11 +1,11 @@
-package com.rfs.source_es_6_8;
+package com.rfs.version_es_7_10;
 
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 
-public class SnapshotMetadataData_ES_6_8 implements com.rfs.common.SnapshotMetadata.Data{
+public class SnapshotMetadataData_ES_7_10 implements com.rfs.common.SnapshotMetadata.Data{
 
     private String name;
     private String uuid;
@@ -24,7 +24,11 @@ public class SnapshotMetadataData_ES_6_8 implements com.rfs.common.SnapshotMetad
     private int totalShards;
     @JsonProperty("successful_shards")
     private int successfulShards;
-    private List<?> failures; // Haven't looked at this yet
+    private List<?> failures; // Haven't looked into this yet
+    @JsonProperty("data_streams")
+    private List<?> dataStreams; // Haven't looked into this yet
+    @JsonProperty("metadata")
+    private Object metaData; // Haven't looked into this yet
 
     public String getName() {
         return name;

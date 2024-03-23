@@ -18,20 +18,20 @@ import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
 
 import com.rfs.common.Uid;
+import com.rfs.version_es_6_8.*;
 import com.rfs.common.GlobalMetadata;
 import com.rfs.common.IndexMetadata;
 import com.rfs.common.ShardMetadata;
 import com.rfs.common.SnapshotMetadata;
 import com.rfs.common.SnapshotRepo;
 import com.rfs.common.SnapshotShardUnpacker;
-import com.rfs.common.SourceVersion;
-import com.rfs.source_es_6_8.*;
-import com.rfs.source_es_7_10.*;
+import com.rfs.common.ClusterVersion;
+import com.rfs.version_es_7_10.*;
 
 public class DemoPrintOutSnapshot {
 
     public static class Args {
-        @Parameter(names = {"-s", "--snapshot-name"}, description = "The name of the snapshot to read", required = true)
+        @Parameter(names = {"-n", "--snapshot-name"}, description = "The name of the snapshot to read", required = true)
         public String snapshotName;
 
         @Parameter(names = {"-d", "--snapshot-dir"}, description = "The absolute path to the snapshot directory", required = true)
@@ -40,8 +40,8 @@ public class DemoPrintOutSnapshot {
         @Parameter(names = {"-l", "--lucene-dir"}, description = "The absolute path to the directory where we'll put the Lucene docs", required = true)
         public String luceneBasePathString;
 
-        @Parameter(names = {"-v", "--source-version"}, description = "Source version", required = true, converter = SourceVersion.ArgsConverter.class)
-        public SourceVersion sourceVersion;
+        @Parameter(names = {"-v", "--source-version"}, description = "Source version", required = true, converter = ClusterVersion.ArgsConverter.class)
+        public ClusterVersion sourceVersion;
     }
 
     public static void main(String[] args) {
@@ -54,7 +54,11 @@ public class DemoPrintOutSnapshot {
         String snapshotName = arguments.snapshotName;
         String snapshotDirPath = arguments.snapshotDirPath;
         String luceneBasePathString = arguments.luceneBasePathString;
-        SourceVersion sourceVersion = arguments.sourceVersion;
+        ClusterVersion sourceVersion = arguments.sourceVersion;
+
+        if (!((sourceVersion == ClusterVersion.ES_6_8) || (sourceVersion == ClusterVersion.ES_7_10))) {
+            throw new IllegalArgumentException("Unsupported source version: " + sourceVersion);
+        }
 
         try {
             // ==========================================================================================================
@@ -64,12 +68,10 @@ public class DemoPrintOutSnapshot {
             System.out.println("Attempting to read Repo data file...");
 
             SnapshotRepo.Provider repoDataProvider;
-            if (sourceVersion == SourceVersion.ES_6_8) {
+            if (sourceVersion == ClusterVersion.ES_6_8) {
                 repoDataProvider = new SnapshotRepoProvider_ES_6_8(Paths.get(snapshotDirPath));
-            } else if (sourceVersion == SourceVersion.ES_7_10) {
-                repoDataProvider = new SnapshotRepoProvider_ES_7_10(Paths.get(snapshotDirPath));
             } else {
-                throw new IllegalArgumentException("Unsupported source version: " + sourceVersion);
+                repoDataProvider = new SnapshotRepoProvider_ES_7_10(Paths.get(snapshotDirPath));
             }
 
             System.out.println("--- Snapshots ---");
@@ -96,12 +98,10 @@ public class DemoPrintOutSnapshot {
             }
 
             SnapshotMetadata.Data snapshotMetadata;
-            if (sourceVersion == SourceVersion.ES_6_8) {
+            if (sourceVersion == ClusterVersion.ES_6_8) {
                 snapshotMetadata = new SnapshotMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
-            } else if (sourceVersion == SourceVersion.ES_7_10) {
-                snapshotMetadata = new SnapshotMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
             } else {
-                throw new IllegalArgumentException("Unsupported source version: " + sourceVersion);
+                snapshotMetadata = new SnapshotMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
             }
 
             System.out.println("Snapshot Metadata State: " + snapshotMetadata.getState());
@@ -118,19 +118,19 @@ public class DemoPrintOutSnapshot {
             System.out.println("Attempting to read Global Metadata details...");
 
             GlobalMetadata.Data globalMetadata;
-            if (sourceVersion == SourceVersion.ES_6_8) {
+            if (sourceVersion == ClusterVersion.ES_6_8) {
                 globalMetadata = new GlobalMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
-            } else if (sourceVersion == SourceVersion.ES_7_10) {
-                globalMetadata = new GlobalMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
             } else {
-                throw new IllegalArgumentException("Unsupported source version: " + sourceVersion);
+                globalMetadata = new GlobalMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
             }
 
-            List<String> templateKeys = new ArrayList<>();
-            globalMetadata.getTemplates().fieldNames().forEachRemaining(templateKeys::add);
-            System.out.println("Templates Keys: " + templateKeys);
+            if (sourceVersion == ClusterVersion.ES_6_8) { 
+                GlobalMetadataData_ES_6_8 globalMetadataES68 = (GlobalMetadataData_ES_6_8) globalMetadata;
 
-            if (sourceVersion == SourceVersion.ES_7_10) {
+                List<String> templateKeys = new ArrayList<>();
+                globalMetadataES68.getTemplates().fieldNames().forEachRemaining(templateKeys::add);
+                System.out.println("Templates Keys: " + templateKeys);
+            } else if (sourceVersion == ClusterVersion.ES_7_10) {
                 GlobalMetadataData_ES_7_10 globalMetadataES710 = (GlobalMetadataData_ES_7_10) globalMetadata;
 
                 List<String> indexTemplateKeys = new ArrayList<>();
@@ -149,18 +149,16 @@ public class DemoPrintOutSnapshot {
             System.out.println("Attempting to read Index Metadata...");
 
             Map<String, IndexMetadata.Data> indexMetadatas = new HashMap<>();
-            if (sourceVersion == SourceVersion.ES_6_8) {
+            if (sourceVersion == ClusterVersion.ES_6_8) {
                 for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
                     IndexMetadata.Data indexMetadata = new IndexMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());
                     indexMetadatas.put(index.getName(), indexMetadata);
                 }
-            } else if (sourceVersion == SourceVersion.ES_7_10) {
+            } else {
                 for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
                     IndexMetadata.Data indexMetadata = new IndexMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());
                     indexMetadatas.put(index.getName(), indexMetadata);
                 }
-            } else {
-                throw new IllegalArgumentException("Unsupported source version: " + sourceVersion);
             }
 
             for (IndexMetadata.Data indexMetadata : indexMetadatas.values()) {
@@ -186,12 +184,10 @@ public class DemoPrintOutSnapshot {
 
                     // Get the file mapping for the shard
                     ShardMetadata.Data shardMetadata;
-                    if (sourceVersion == SourceVersion.ES_6_8) {
+                    if (sourceVersion == ClusterVersion.ES_6_8) {
                         shardMetadata = new ShardMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-                    } else if (sourceVersion == SourceVersion.ES_7_10) {
-                        shardMetadata = new ShardMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                     } else {
-                        throw new IllegalArgumentException("Unsupported source version: " + sourceVersion);
+                        shardMetadata = new ShardMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                     }
                     System.out.println("Shard Metadata: " + shardMetadata.toString());
                 }
@@ -206,12 +202,10 @@ public class DemoPrintOutSnapshot {
             for (IndexMetadata.Data indexMetadata : indexMetadatas.values()){
                 for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
                     ShardMetadata.Data shardMetadata;
-                    if (sourceVersion == SourceVersion.ES_6_8) {
+                    if (sourceVersion == ClusterVersion.ES_6_8) {
                         shardMetadata = new ShardMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-                    } else if (sourceVersion == SourceVersion.ES_7_10) {
-                        shardMetadata = new ShardMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                     } else {
-                        throw new IllegalArgumentException("Unsupported source version: " + sourceVersion);
+                        shardMetadata = new ShardMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                     }
                     SnapshotShardUnpacker.unpack(shardMetadata, Paths.get(snapshotDirPath), Paths.get(luceneBasePathString));
 

@@ -1,34 +1,48 @@
-package com.rfs.source_es_6_8;
+package com.rfs.version_es_6_8;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-public class Transformer_to_OS_2_11 implements Transformer {
+import com.rfs.common.Transformer;
+
+public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
+    private static final ObjectMapper mapper = new ObjectMapper();    
     private int awarenessAttributeDimensionality;
 
-    public Transformer_to_OS_2_11(int awarenessAttributeDimensionality) {
+    public Transformer_ES_6_8_to_OS_2_11(int awarenessAttributeDimensionality) {
         this.awarenessAttributeDimensionality = awarenessAttributeDimensionality;
     }
 
-    public ObjectNode transformTemplateBody(ObjectNode root) {
+    public ObjectNode transformGlobalMetadata(ObjectNode root) {
+        ObjectNode newRoot = mapper.createObjectNode();
+
+        // Transform the original "templates", but put them into the legacy "templates" bucket on the target
+        ObjectNode templatesRoot = (ObjectNode) root.get("templates").deepCopy();
+        templatesRoot.fieldNames().forEachRemaining(templateName -> {
+            ObjectNode template = (ObjectNode) templatesRoot.get(templateName);
+            removeIntermediateMappingsLevel(template);
+            removeIntermediateIndexSettingsLevel(template); // run before fixNumberOfReplicas
+            fixNumberOfReplicas(template);
+            templatesRoot.set(templateName, template);
+        });
+        newRoot.set("templates", templatesRoot);
 
         System.out.println("Original Object: " + root.toString());
-        removeIntermediateMappingsLevel(root);
-        removeIntermediateIndexSettingsLevel(root); // run before fixNumberOfReplicas
-        fixNumberOfReplicas(root);
-        System.out.println("Transformed Object: " + root.toString());
-        
-        return root;
+        System.out.println("Transformed Object: " + newRoot.toString());
+        return newRoot;
     }
 
-    public ObjectNode transformIndexBody(ObjectNode root) {
+    public ObjectNode transformIndexMetadata(ObjectNode root){        
+        ObjectNode newRoot = root.deepCopy();
+
+        removeIntermediateMappingsLevel(newRoot);
+        removeIntermediateIndexSettingsLevel(newRoot); // run before fixNumberOfReplicas
+        fixNumberOfReplicas(newRoot);
+
         System.out.println("Original Object: " + root.toString());
-        removeIntermediateMappingsLevel(root);
-        removeIntermediateIndexSettingsLevel(root); // run before fixNumberOfReplicas
-        fixNumberOfReplicas(root);
-        System.out.println("Transformed Object: " + root.toString());     
-        
-        return root;
+        System.out.println("Transformed Object: " + newRoot.toString());
+        return newRoot;
     }
 
     /**
@@ -50,9 +64,7 @@ public class Transformer_to_OS_2_11 implements Transformer {
             } catch (ClassCastException e) {
                 // mappings isn't an array
                 return;
-            }
-            
-            
+            }            
         }
     }
     /**
@@ -71,25 +83,6 @@ public class Transformer_to_OS_2_11 implements Transformer {
                 root.set("settings", settingsRoot);
             }
         }
-
-
-
-        // if (root.has("settings")) {
-        //     ObjectNode mappingsRoot = (ObjectNode) root.get("settings");
-
-        //     String[] subKeys = new String[] {"index"};
-        //     for (String subKey : subKeys) {
-        //         if (mappingsRoot.has(subKey)) {
-        //             ObjectNode subNode = (ObjectNode) mappingsRoot.get(subKey);
-
-        //             subNode.fieldNames().forEachRemaining(fieldName -> {
-        //                 mappingsRoot.set(fieldName, subNode.get(fieldName));
-        //             });
-
-        //             mappingsRoot.remove(subKey);
-        //         }
-        //     }
-        // }
     }
 
     /**

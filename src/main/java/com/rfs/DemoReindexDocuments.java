@@ -16,15 +16,15 @@ import com.rfs.common.LuceneDocumentsReader;
 import com.rfs.common.SnapshotMetadata;
 import com.rfs.common.SnapshotRepo;
 import com.rfs.common.SnapshotShardUnpacker;
-import com.rfs.common.SourceVersion;
-import com.rfs.source_es_6_8.IndexMetadataData_ES_6_8;
-import com.rfs.source_es_6_8.IndexMetadataFactory_ES_6_8;
-import com.rfs.source_es_6_8.ShardMetadataData_ES_6_8;
-import com.rfs.source_es_6_8.ShardMetadataFactory_ES_6_8;
-import com.rfs.source_es_6_8.SnapshotRepoData_ES_6_8;
-import com.rfs.source_es_6_8.SnapshotRepoProvider_ES_6_8;
-import com.rfs.source_es_6_8.SnapshotMetadataData_ES_6_8;
-import com.rfs.source_es_6_8.SnapshotMetadataFactory_ES_6_8;
+import com.rfs.version_es_6_8.IndexMetadataData_ES_6_8;
+import com.rfs.version_es_6_8.IndexMetadataFactory_ES_6_8;
+import com.rfs.version_es_6_8.ShardMetadataData_ES_6_8;
+import com.rfs.version_es_6_8.ShardMetadataFactory_ES_6_8;
+import com.rfs.version_es_6_8.SnapshotMetadataData_ES_6_8;
+import com.rfs.version_es_6_8.SnapshotMetadataFactory_ES_6_8;
+import com.rfs.version_es_6_8.SnapshotRepoData_ES_6_8;
+import com.rfs.version_es_6_8.SnapshotRepoProvider_ES_6_8;
+import com.rfs.common.ClusterVersion;
 
 
 public class DemoReindexDocuments {
@@ -48,8 +48,8 @@ public class DemoReindexDocuments {
         @Parameter(names = {"-p", "--target-password"}, description = "The target password", required = true)
         public String targetPass;
 
-        @Parameter(names = {"-v", "--source-version"}, description = "Source version", required = true, converter = SourceVersion.ArgsConverter.class)
-        public SourceVersion sourceVersion;
+        @Parameter(names = {"-v", "--source-version"}, description = "Source version", required = true, converter = ClusterVersion.ArgsConverter.class)
+        public ClusterVersion sourceVersion;
     }
 
 
@@ -66,11 +66,11 @@ public class DemoReindexDocuments {
         String targetHost = arguments.targetHost;
         String targetUser = arguments.targetUser;
         String targetPass = arguments.targetPass;
-        SourceVersion sourceVersion = arguments.sourceVersion;
+        ClusterVersion sourceVersion = arguments.sourceVersion;
         Path luceneBasePath = Paths.get(luceneBasePathString);
         ConnectionDetails targetConnection = new ConnectionDetails(targetHost, targetUser, targetPass);
 
-        if (sourceVersion != SourceVersion.ES_6_8) {
+        if (sourceVersion != ClusterVersion.ES_6_8) {
             System.out.println("Only ES_6_8 is supported");
             return;
         }

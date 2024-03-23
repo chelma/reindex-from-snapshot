@@ -48,7 +48,7 @@ public class GlobalMetadata {
     }
 
     public static interface Data {
-        public ObjectNode getTemplates() throws Exception;
+        public ObjectNode toObjectNode() throws Exception;
     }
     
 }

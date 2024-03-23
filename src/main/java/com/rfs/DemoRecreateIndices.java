@@ -6,33 +6,28 @@ import java.util.List;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
-
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.rfs.common.ConnectionDetails;
 import com.rfs.common.GlobalMetadata;
 import com.rfs.common.IndexCreator;
+import com.rfs.common.IndexMetadata;
 import com.rfs.common.SnapshotMetadata;
 import com.rfs.common.SnapshotRepo;
-import com.rfs.common.SourceVersion;
-import com.rfs.source_es_6_8.GlobalMetadataData_ES_6_8;
-import com.rfs.source_es_6_8.GlobalMetadataCreator;
-import com.rfs.source_es_6_8.GlobalMetadataFactory_ES_6_8;
-import com.rfs.source_es_6_8.IndexMetadataData_ES_6_8;
-import com.rfs.source_es_6_8.IndexMetadataFactory_ES_6_8;
-import com.rfs.source_es_6_8.SnapshotRepoData_ES_6_8;
-import com.rfs.source_es_6_8.SnapshotRepoProvider_ES_6_8;
-import com.rfs.source_es_6_8.Transformer_to_OS_2_11;
-import com.rfs.source_es_6_8.SnapshotMetadataData_ES_6_8;
-import com.rfs.source_es_6_8.SnapshotMetadataFactory_ES_6_8;
+import com.rfs.common.Transformer;
+import com.rfs.common.ClusterVersion;
+import com.rfs.version_es_6_8.*;
+import com.rfs.version_es_7_10.*;
+import com.rfs.version_os_2_11.*;
 
 public class DemoRecreateIndices {
     public static class Args {
-        @Parameter(names = {"-s", "--snapshot-name"}, description = "The name of the snapshot to read", required = true)
+        @Parameter(names = {"-n", "--snapshot-name"}, description = "The name of the snapshot to read", required = true)
         public String snapshotName;
 
         @Parameter(names = {"-d", "--snapshot-dir"}, description = "The absolute path to the snapshot directory", required = true)
         public String snapshotDirPath;
 
-        @Parameter(names = {"-t", "--target-host"}, description = "The target host and port (e.g. http://localhost:9200)", required = true)
+        @Parameter(names = {"-h", "--target-host"}, description = "The target host and port (e.g. http://localhost:9200)", required = true)
         public String targetHost;
 
         @Parameter(names = {"-u", "--target-username"}, description = "The target username", required = true)
@@ -41,8 +36,11 @@ public class DemoRecreateIndices {
         @Parameter(names = {"-p", "--target-password"}, description = "The target password", required = true)
         public String targetPass;
 
-        @Parameter(names = {"-v", "--source-version"}, description = "Source version", required = true, converter = SourceVersion.ArgsConverter.class)
-        public SourceVersion sourceVersion;
+        @Parameter(names = {"-s", "--source-version"}, description = "Source version", required = true, converter = ClusterVersion.ArgsConverter.class)
+        public ClusterVersion sourceVersion;
+
+        @Parameter(names = {"-t", "--target-version"}, description = "Target version", required = true, converter = ClusterVersion.ArgsConverter.class)
+        public ClusterVersion targetVersion;
     }
 
 
@@ -58,27 +56,28 @@ public class DemoRecreateIndices {
         String targetHost = arguments.targetHost;
         String targetUser = arguments.targetUser;
         String targetPass = arguments.targetPass;
-        SourceVersion sourceVersion = arguments.sourceVersion;
+        ClusterVersion sourceVersion = arguments.sourceVersion;
+        ClusterVersion targetVersion = arguments.targetVersion;
         ConnectionDetails targetConnection = new ConnectionDetails(targetHost, targetUser, targetPass);
 
-        if (sourceVersion != SourceVersion.ES_6_8) {
-            System.out.println("Only ES_6_8 is supported");
-            return;
+        if (!((sourceVersion == ClusterVersion.ES_6_8) || (sourceVersion == ClusterVersion.ES_7_10))) {
+            throw new IllegalArgumentException("Unsupported source version: " + sourceVersion);
         }
 
-        // Should probably be passed in as an argument
-        String[] templateWhitelist = {"posts_index_template"};
+        if (targetVersion != ClusterVersion.OS_2_11) {
+            throw new IllegalArgumentException("Unsupported target version: " + sourceVersion);
+        }
 
-        // Should determine the source, target versions programmatically.  The dimensionality is from the target I'm using
-        // to test.
-        Transformer_to_OS_2_11 transformer = new Transformer_to_OS_2_11(3);
+        // Should probably be passed in as an arguments
+        String[] templateWhitelist = {"posts_index_template"};
+        String[] componentTemplateWhitelist = {"posts_template"};
 
         try {
             // ==========================================================================================================
             // Read the Repo data file
             // ==========================================================================================================
             System.out.println("Attempting to read Repo data file...");
-            SnapshotRepoProvider_ES_6_8 repoDataProvider = new SnapshotRepoProvider_ES_6_8(Paths.get(snapshotDirPath));
+            SnapshotRepo.Provider repoDataProvider = new SnapshotRepoProvider_ES_6_8(Paths.get(snapshotDirPath));
             System.out.println("Repo data read successfully");
 
             // // ==========================================================================================================
@@ -105,13 +104,33 @@ public class DemoRecreateIndices {
             // Recreate the Global Metadata
             // ==========================================================================================================
             System.out.println("Attempting to recreate the Global Metadata...");
-            GlobalMetadataCreator.create(globalMetadata, targetConnection, templateWhitelist, transformer);
+
+            if (sourceVersion == ClusterVersion.ES_6_8) {
+                if (targetVersion == ClusterVersion.OS_2_11) {
+                    Transformer transformer = new Transformer_ES_6_8_to_OS_2_11(3);
+                    ObjectNode root = globalMetadata.toObjectNode();
+                    ObjectNode transformedRoot = transformer.transformGlobalMetadata(root);                    
+                    GlobalMetadataCreator_OS_2_11.create(transformedRoot, targetConnection, new String[0], templateWhitelist);
+                } else {
+                    throw new IllegalArgumentException("Unsupported target version " + targetVersion + " for source version " + sourceVersion);
+                }
+                
+            } else if (sourceVersion == ClusterVersion.ES_7_10) {
+                if (targetVersion == ClusterVersion.OS_2_11) {
+                    Transformer transformer = new Transformer_ES_7_10_OS_2_11(3);
+                    ObjectNode root = globalMetadata.toObjectNode();
+                    ObjectNode transformedRoot = transformer.transformGlobalMetadata(root);                    
+                    GlobalMetadataCreator_OS_2_11.create(transformedRoot, targetConnection, componentTemplateWhitelist, templateWhitelist);
+                } else {
+                    throw new IllegalArgumentException("Unsupported target version " + targetVersion + " for source version " + sourceVersion);
+                }
+            }
 
             // // ==========================================================================================================
             // // Read all the Index Metadata
             // // ==========================================================================================================
             // System.out.println("Attempting to read Index Metadata...");
-            // List<IndexMetadataData_ES_6_8> indexMetadatas = new ArrayList<>();
+            // List<IndexMetadata.Data> indexMetadatas = new ArrayList<>();
             // for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
             //     System.out.println("Reading Index Metadata for index: " + index.getName());
             //     IndexMetadataData_ES_6_8 indexMetadata = IndexMetadataFactory_ES_6_8.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());

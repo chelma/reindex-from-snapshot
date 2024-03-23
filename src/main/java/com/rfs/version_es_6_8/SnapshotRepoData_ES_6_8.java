@@ -1,4 +1,4 @@
-package com.rfs.source_es_6_8;
+package com.rfs.version_es_6_8;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rfs.common.SnapshotRepo;

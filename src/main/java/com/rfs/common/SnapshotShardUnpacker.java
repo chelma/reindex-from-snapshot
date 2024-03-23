@@ -11,7 +11,7 @@ import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.NativeFSLockFactory;
 import org.apache.lucene.util.BytesRef;
 
-import com.rfs.source_es_6_8.ElasticsearchConstants_ES_6_8;
+import com.rfs.version_es_6_8.ElasticsearchConstants_ES_6_8;
 
 public class SnapshotShardUnpacker {
     public static void unpack(ShardMetadata.Data shardMetadata, Path snapshotBasePath, Path luceneFilesBasePath) throws Exception {
