@@ -77,6 +77,7 @@ public class DemoRecreateIndices {
             // ==========================================================================================================
             // Read the Repo data file
             // ==========================================================================================================
+            System.out.println("==================================================================");
             System.out.println("Attempting to read Repo data file...");
             SnapshotRepo.Provider repoDataProvider;
             if (sourceVersion == ClusterVersion.ES_6_8) {
@@ -89,6 +90,7 @@ public class DemoRecreateIndices {
             // // ==========================================================================================================
             // // Read the Snapshot details
             // // ==========================================================================================================
+            System.out.println("==================================================================");
             System.out.println("Attempting to read Snapshot details...");
             String snapshotIdString = repoDataProvider.getSnapshotId(snapshotName);
 
@@ -107,6 +109,7 @@ public class DemoRecreateIndices {
             // ==========================================================================================================
             // Read the Global Metadata
             // ==========================================================================================================
+            System.out.println("==================================================================");
             System.out.println("Attempting to read Global Metadata details...");
             GlobalMetadata.Data globalMetadata;
             if (sourceVersion == ClusterVersion.ES_6_8) {
@@ -119,6 +122,7 @@ public class DemoRecreateIndices {
             // ==========================================================================================================
             // Recreate the Global Metadata
             // ==========================================================================================================
+            System.out.println("==================================================================");
             System.out.println("Attempting to recreate the Global Metadata...");
 
             if (sourceVersion == ClusterVersion.ES_6_8) {
@@ -144,6 +148,7 @@ public class DemoRecreateIndices {
             // ==========================================================================================================
             // Read all the Index Metadata
             // ==========================================================================================================
+            System.out.println("==================================================================");
             System.out.println("Attempting to read Index Metadata...");
             List<IndexMetadata.Data> indexMetadatas = new ArrayList<>();
             for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
@@ -161,6 +166,7 @@ public class DemoRecreateIndices {
             // ==========================================================================================================
             // Recreate the indices
             // ==========================================================================================================
+            System.out.println("==================================================================");
             System.out.println("Attempting to recreate the indices...");
             for (IndexMetadata.Data indexMetadata : indexMetadatas) {
                 String reindexName = indexMetadata.getName() + "_reindexed";
@@ -187,10 +193,6 @@ public class DemoRecreateIndices {
                         throw new IllegalArgumentException("Unsupported target version " + targetVersion + " for source version " + sourceVersion);
                     }
                 }
-
-
-
-                // IndexCreator.create(reindexName, indexMetadata, targetConnection, transformer);
             }
             
         } catch (Exception e) {
