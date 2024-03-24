@@ -93,9 +93,7 @@ curl -X PUT "localhost:9200/_snapshot/fs_repository/global_state_snapshot?wait_f
   "ignore_unavailable": true,
   "include_global_state": true
 }'
-```
-
-You'll need to update the snapshot repository path on disk when you register it.  You can find this in your `elasticsearch.yml` file; for me it was in `/Users/chelma/workspace/ElasticSearch/elasticsearch/distribution/build/cluster/run node0/elasticsearch-6.8.24-SNAPSHOT/config`.  
+``` 
 
 ### Set up your OS 2.11 Target Cluster
 
@@ -106,7 +104,13 @@ I've only tested the scripts going from ES 6.8 to OS 2.11.  For my test target, 
 I've been running them VS Code integration, but you should be able to do it using their dedicated gradle commands as well.  That would look something like:
 
 ```
+SNAPSHOT_DIR=/Users/chelma/workspace/ElasticSearch/elasticsearch/distribution/build/cluster/shared/repo
+LUCENE_DIR=/tmp/lucene_files
+HOSTNAME=<Amazon OpenSearch Domain URL>
+USERNAME=<Amazon OpenSearch Domain master user name>
+PASSWORD=<Amazon OpenSearch Domain master password>
+
 gradle build
-gradle run demoRecreateIndices global_state_snapshot <abs path to your snapshot dir> https://<your OS2.11 domain> <master user> <master password>
-gradle run demoReindexDocuments global_state_snapshot <abs path to your snapshot dir> <abs path to where you want the Lucene files unpacked to> https://<your OS2.11 domain> <master user> <master password>
+
+gradle run --args='-n global_state_snapshot -d $SNAPSHOT_DIR -l $LUCENE_DIR -h $HOSTNAME  -u $USERNAME -p $PASSWORD -s es_6_8 -t os_2_11 --movement-type everything'
 ```

@@ -24,7 +24,7 @@ dependencies {
 }
 
 application {
-    mainClassName = 'com.rfs.DemoPrintOutSnapshot'
+    mainClassName = 'com.rfs.ReindexFromSnapshot'
 }
 
 task demoRecreateIndices(type: JavaExec) {
@@ -35,4 +35,9 @@ task demoRecreateIndices(type: JavaExec) {
 task demoReindexDocuments(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'com.rfs.DemoReindexDocuments'
+}
+
+task demoPrintOutSnapshot(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'com.rfs.DemoPrintOutSnapshot'
 }

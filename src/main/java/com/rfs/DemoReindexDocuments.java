@@ -3,35 +3,15 @@ package com.rfs;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.lucene.document.Document;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
-import com.rfs.common.ConnectionDetails;
-import com.rfs.common.DocumentReindexer;
-import com.rfs.common.IndexMetadata;
-import com.rfs.common.LuceneDocumentsReader;
-import com.rfs.common.ShardMetadata;
-import com.rfs.common.SnapshotMetadata;
-import com.rfs.common.SnapshotRepo;
-import com.rfs.common.SnapshotShardUnpacker;
-import com.rfs.version_es_6_8.IndexMetadataData_ES_6_8;
-import com.rfs.version_es_6_8.IndexMetadataFactory_ES_6_8;
-import com.rfs.version_es_6_8.ShardMetadataData_ES_6_8;
-import com.rfs.version_es_6_8.ShardMetadataFactory_ES_6_8;
-import com.rfs.version_es_6_8.SnapshotMetadataData_ES_6_8;
-import com.rfs.version_es_6_8.SnapshotMetadataFactory_ES_6_8;
-import com.rfs.version_es_6_8.SnapshotRepoData_ES_6_8;
-import com.rfs.version_es_6_8.SnapshotRepoProvider_ES_6_8;
-import com.rfs.version_es_7_10.IndexMetadataFactory_ES_7_10;
-import com.rfs.version_es_7_10.ShardMetadataFactory_ES_7_10;
-import com.rfs.version_es_7_10.SnapshotMetadataFactory_ES_7_10;
-import com.rfs.version_es_7_10.SnapshotRepoProvider_ES_7_10;
-import com.rfs.common.ClusterVersion;
+import com.rfs.common.*;
+import com.rfs.version_es_6_8.*;
+import com.rfs.version_es_7_10.*;
 
 
 public class DemoReindexDocuments {
