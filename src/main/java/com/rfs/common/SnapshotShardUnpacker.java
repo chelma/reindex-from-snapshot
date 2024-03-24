@@ -5,16 +5,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.NativeFSLockFactory;
 import org.apache.lucene.util.BytesRef;
 
-import com.rfs.version_es_6_8.ElasticsearchConstants_ES_6_8;
 
 public class SnapshotShardUnpacker {
-    public static void unpack(ShardMetadata.Data shardMetadata, Path snapshotBasePath, Path luceneFilesBasePath) throws Exception {
+    private static final Logger logger = LogManager.getLogger(SnapshotShardUnpacker.class);
+
+    public static void unpack(ShardMetadata.Data shardMetadata, Path snapshotBasePath, Path luceneFilesBasePath, int bufferSize) throws Exception {
         // Some constants
         NativeFSLockFactory lockFactory = NativeFSLockFactory.INSTANCE;
 
@@ -27,7 +30,7 @@ public class SnapshotShardUnpacker {
         final FSDirectory primaryDirectory = FSDirectory.open(luceneIndexDir, lockFactory);
 
         for (ShardMetadata.FileInfo fileMetadata : shardMetadata.getFiles()) {
-            System.out.println("Unpacking - Blob Name: " + fileMetadata.getName() + ", Lucene Name: " + fileMetadata.getPhysicalName());
+            logger.info("Unpacking - Blob Name: " + fileMetadata.getName() + ", Lucene Name: " + fileMetadata.getPhysicalName());
             IndexOutput indexOutput = primaryDirectory.createOutput(fileMetadata.getPhysicalName(), IOContext.DEFAULT);
 
             if (fileMetadata.getName().startsWith("v__")) {
@@ -35,7 +38,7 @@ public class SnapshotShardUnpacker {
                 indexOutput.writeBytes(hash.bytes, hash.offset, hash.length);
             } else {
                 try (InputStream stream = new PartSliceStream(shardDirPath, fileMetadata)) {
-                    final byte[] buffer = new byte[Math.toIntExact(Math.min(ElasticsearchConstants_ES_6_8.BUFFER_SIZE_IN_BYTES, fileMetadata.getLength()))];
+                    final byte[] buffer = new byte[Math.toIntExact(Math.min(bufferSize, fileMetadata.getLength()))];
                     int length;
                     while ((length = stream.read(buffer)) > 0) {
                         indexOutput.writeBytes(buffer, 0, length);

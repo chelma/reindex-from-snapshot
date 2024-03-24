@@ -9,7 +9,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class RestClient {
+    private static final Logger logger = LogManager.getLogger(RestClient.class);
     public final ConnectionDetails connectionDetails;
 
     public RestClient(ConnectionDetails connectionDetails) {
@@ -59,7 +63,11 @@ public class RestClient {
             }
         }
 
-        System.out.println("Response Code: " + responseCode + ", Response Message: " + conn.getResponseMessage() + ", Response Body: " + responseBody);
+        if (responseCode == 200 || responseCode == 201) {
+            logger.debug("Response Code: " + responseCode + ", Response Message: " + conn.getResponseMessage() + ", Response Body: " + responseBody);
+        } else {
+            logger.error("Response Code: " + responseCode + ", Response Message: " + conn.getResponseMessage() + ", Response Body: " + responseBody);
+        }
 
         conn.disconnect();        
     }

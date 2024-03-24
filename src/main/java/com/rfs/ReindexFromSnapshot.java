@@ -5,11 +5,14 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.lucene.document.Document;
-
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.lucene.document.Document;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+
 import com.rfs.common.*;
 import com.rfs.transformers.*;
 import com.rfs.version_es_6_8.*;
@@ -17,6 +20,8 @@ import com.rfs.version_es_7_10.*;
 import com.rfs.version_os_2_11.*;
 
 public class ReindexFromSnapshot {
+    private static final Logger logger = LogManager.getLogger(ReindexFromSnapshot.class);
+
     public static class Args {
         @Parameter(names = {"-n", "--snapshot-name"}, description = "The name of the snapshot to read", required = true)
         public String snapshotName;
@@ -42,12 +47,15 @@ public class ReindexFromSnapshot {
         @Parameter(names = {"-t", "--target-version"}, description = "Target version", required = true, converter = ClusterVersion.ArgsConverter.class)
         public ClusterVersion targetVersion;
 
-        @Parameter(names = {"--movement-type"}, description = "What you want to move - everything, metadata, or data", required = false, converter = MovementType.ArgsConverter.class)
+        @Parameter(names = {"--movement-type"}, description = "What you want to move - everything, metadata, or data.  Default: 'everything'", required = false, converter = MovementType.ArgsConverter.class)
         public MovementType movementType = MovementType.EVERYTHING;
+
+        @Parameter(names = {"--log-level"}, description = "What log level you want.  Default: 'info'", required = false, converter = Logging.ArgsConverter.class)
+        public Level logLevel = Level.INFO;
     }
 
-
     public static void main(String[] args) {
+        // Grab out args
         Args arguments = new Args();
         JCommander.newBuilder()
             .addObject(arguments)
@@ -63,6 +71,10 @@ public class ReindexFromSnapshot {
         ClusterVersion sourceVersion = arguments.sourceVersion;
         ClusterVersion targetVersion = arguments.targetVersion;
         MovementType movementType = arguments.movementType;
+        Level logLevel = arguments.logLevel;
+
+        Logging.setLevel(logLevel);
+
         ConnectionDetails targetConnection = new ConnectionDetails(targetHost, targetUser, targetPass);
 
         // Should probably be passed in as an arguments
@@ -86,25 +98,25 @@ public class ReindexFromSnapshot {
             // ==========================================================================================================
             // Read the Repo data file
             // ==========================================================================================================
-            System.out.println("==================================================================");
-            System.out.println("Attempting to read Repo data file...");
+            logger.info("==================================================================");
+            logger.info("Attempting to read Repo data file...");
             SnapshotRepo.Provider repoDataProvider;
             if (sourceVersion == ClusterVersion.ES_6_8) {
                 repoDataProvider = new SnapshotRepoProvider_ES_6_8(snapshotDirPath);
             } else {
                 repoDataProvider = new SnapshotRepoProvider_ES_7_10(snapshotDirPath);
             }
-            System.out.println("Repo data read successfully");
+            logger.info("Repo data read successfully");
 
             // // ==========================================================================================================
             // // Read the Snapshot details
             // // ==========================================================================================================
-            System.out.println("==================================================================");
-            System.out.println("Attempting to read Snapshot details...");
+            logger.info("==================================================================");
+            logger.info("Attempting to read Snapshot details...");
             String snapshotIdString = repoDataProvider.getSnapshotId(snapshotName);
 
             if (snapshotIdString == null) {
-                System.out.println("Snapshot not found");
+                logger.warn("Snapshot not found");
                 return;
             }
             SnapshotMetadata.Data snapshotMetadata;
@@ -113,27 +125,27 @@ public class ReindexFromSnapshot {
             } else {
                 snapshotMetadata = new SnapshotMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
             }
-            System.out.println("Snapshot data read successfully");
+            logger.info("Snapshot data read successfully");
 
             if ((movementType == MovementType.EVERYTHING) || (movementType == MovementType.METADATA)){
                 // ==========================================================================================================
                 // Read the Global Metadata
                 // ==========================================================================================================
-                System.out.println("==================================================================");
-                System.out.println("Attempting to read Global Metadata details...");
+                logger.info("==================================================================");
+                logger.info("Attempting to read Global Metadata details...");
                 GlobalMetadata.Data globalMetadata;
                 if (sourceVersion == ClusterVersion.ES_6_8) {
                     globalMetadata = new GlobalMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
                 } else {
                     globalMetadata = new GlobalMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
                 }
-                System.out.println("Global Metadata read successfully");
+                logger.info("Global Metadata read successfully");
 
                 // ==========================================================================================================
                 // Recreate the Global Metadata
                 // ==========================================================================================================
-                System.out.println("==================================================================");
-                System.out.println("Attempting to recreate the Global Metadata...");
+                logger.info("==================================================================");
+                logger.info("Attempting to recreate the Global Metadata...");
 
                 if (sourceVersion == ClusterVersion.ES_6_8) {
                     ObjectNode root = globalMetadata.toObjectNode();
@@ -149,11 +161,11 @@ public class ReindexFromSnapshot {
             // ==========================================================================================================
             // Read all the Index Metadata
             // ==========================================================================================================
-            System.out.println("==================================================================");
-            System.out.println("Attempting to read Index Metadata...");
+            logger.info("==================================================================");
+            logger.info("Attempting to read Index Metadata...");
             List<IndexMetadata.Data> indexMetadatas = new ArrayList<>();
             for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
-                System.out.println("Reading Index Metadata for index: " + index.getName());
+                logger.info("Reading Index Metadata for index: " + index.getName());
                 IndexMetadata.Data indexMetadata;
                 if (sourceVersion == ClusterVersion.ES_6_8) {
                     indexMetadata = new IndexMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());
@@ -162,17 +174,17 @@ public class ReindexFromSnapshot {
                 }
                 indexMetadatas.add(indexMetadata);
             }
-            System.out.println("Index Metadata read successfully");
+            logger.info("Index Metadata read successfully");
 
             if ((movementType == MovementType.EVERYTHING) || (movementType == MovementType.METADATA)){
                 // ==========================================================================================================
                 // Recreate the Indices
                 // ==========================================================================================================
-                System.out.println("==================================================================");
-                System.out.println("Attempting to recreate the indices...");
+                logger.info("==================================================================");
+                logger.info("Attempting to recreate the indices...");
                 for (IndexMetadata.Data indexMetadata : indexMetadatas) {
                     String reindexName = indexMetadata.getName() + "_reindexed";
-                    System.out.println("Recreating index " + indexMetadata.getName() + " as " + reindexName + " on target...");
+                    logger.info("Recreating index " + indexMetadata.getName() + " as " + reindexName + " on target...");
 
                     ObjectNode root = indexMetadata.toObjectNode();
                     ObjectNode transformedRoot = transformer.transformIndexMetadata(root);
@@ -185,13 +197,13 @@ public class ReindexFromSnapshot {
                 // ==========================================================================================================
                 // Unpack the snapshot blobs
                 // ==========================================================================================================
-                System.out.println("==================================================================");
-                System.out.println("Unpacking blob files to disk...");
+                logger.info("==================================================================");
+                logger.info("Unpacking blob files to disk...");
 
                 for (IndexMetadata.Data indexMetadata : indexMetadatas) {
-                    System.out.println("Processing index: " + indexMetadata.getName());
+                    logger.info("Processing index: " + indexMetadata.getName());
                     for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-                        System.out.println("=== Shard ID: " + shardId + " ===");
+                        logger.info("=== Shard ID: " + shardId + " ===");
 
                         // Get the shard metadata
                         ShardMetadata.Data shardMetadata;
@@ -200,24 +212,33 @@ public class ReindexFromSnapshot {
                         } else {
                             shardMetadata = new ShardMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                         }
-                        SnapshotShardUnpacker.unpack(shardMetadata, snapshotDirPath, luceneDirPath);
+
+                        // Unpack the shard
+                        int bufferSize;
+                        if (sourceVersion == ClusterVersion.ES_6_8) {
+                            bufferSize = ElasticsearchConstants_ES_6_8.BUFFER_SIZE_IN_BYTES;
+                        } else {
+                            bufferSize = ElasticsearchConstants_ES_7_10.BUFFER_SIZE_IN_BYTES;
+                        }
+
+                        SnapshotShardUnpacker.unpack(shardMetadata, snapshotDirPath, luceneDirPath, bufferSize);
                     }
                 }
 
-                System.out.println("Blob files unpacked successfully");
+                logger.info("Blob files unpacked successfully");
 
                 // ==========================================================================================================
                 // Reindex the documents
                 // ==========================================================================================================
-                System.out.println("==================================================================");
-                System.out.println("Reindexing the documents...");
+                logger.info("==================================================================");
+                logger.info("Reindexing the documents...");
 
                 for (IndexMetadata.Data indexMetadata : indexMetadatas) {
                     for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-                        System.out.println("=== Index Id: " + indexMetadata.getName() + ", Shard ID: " + shardId + " ===");
+                        logger.info("=== Index Id: " + indexMetadata.getName() + ", Shard ID: " + shardId + " ===");
 
                         List<Document> documents = LuceneDocumentsReader.readDocuments(luceneDirPath, indexMetadata.getName(), shardId);
-                        System.out.println("Documents read successfully");
+                        logger.info("Documents read successfully");
 
                         for (Document document : documents) {
                             String targetIndex = indexMetadata.getName() + "_reindexed";
@@ -226,7 +247,7 @@ public class ReindexFromSnapshot {
                     }
                 }
 
-                System.out.println("Documents reindexed successfully");
+                logger.info("Documents reindexed successfully");
             }
             
         } catch (Exception e) {

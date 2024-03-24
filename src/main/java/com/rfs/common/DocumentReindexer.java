@@ -1,8 +1,12 @@
 package com.rfs.common;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.lucene.document.Document;
 
 public class DocumentReindexer {
+    private static final Logger logger = LogManager.getLogger(DocumentReindexer.class);
+
     public static void reindex(String indexName, Document document, ConnectionDetails targetConnection) throws Exception {
 
         // List<org.apache.lucene.index.IndexableField> fields = document.getFields();
@@ -23,7 +27,7 @@ public class DocumentReindexer {
         String source = document.getBinaryValue("_source").utf8ToString();
 
 
-        System.out.println("Reindexing document - Index: " + indexName + ", Document ID: " + id);
+        logger.info("Reindexing document - Index: " + indexName + ", Document ID: " + id);
 
         // Assemble the request details
         String path = indexName + "/_doc/" + id;

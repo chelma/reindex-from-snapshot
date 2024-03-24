@@ -3,13 +3,18 @@ package com.rfs.version_os_2_11;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.rfs.common.ConnectionDetails;
 import com.rfs.common.RestClient;
 
 public class GlobalMetadataCreator_OS_2_11 {
+    private static final Logger logger = LogManager.getLogger(GlobalMetadataCreator_OS_2_11.class);
+
     public static void create(ObjectNode root, ConnectionDetails connectionDetails, String[] componentTemplateWhitelist, String[] indexTemplateWhitelist) throws Exception {
-        System.out.println("Setting Global Metadata");
+        logger.info("Setting Global Metadata");
 
         GlobalMetadataData_OS_2_11 globalMetadata = new GlobalMetadataData_OS_2_11(root);
         createTemplates(globalMetadata, connectionDetails, indexTemplateWhitelist);
@@ -18,24 +23,23 @@ public class GlobalMetadataCreator_OS_2_11 {
     }
 
     public static void createTemplates(GlobalMetadataData_OS_2_11 globalMetadata, ConnectionDetails connectionDetails, String[] indexTemplateWhitelist) throws Exception {
-        System.out.println("Setting Legacy Templates");
+        logger.info("Setting Legacy Templates");
         ObjectNode templates = globalMetadata.getTemplates();
 
         if (templates == null){
-            System.out.println("No Legacy Templates");
+            logger.info("No Legacy Templates");
             return;
         }
 
         if (indexTemplateWhitelist != null) {
             for (String templateName : indexTemplateWhitelist) {
                 if (!templates.has(templateName) || templates.get(templateName) == null) {
-                    System.out.println("Legacy Template not found: " + templateName);
+                    logger.warn("Legacy Template not found: " + templateName);
                     continue;
                 }
 
-                System.out.println("Setting Legacy Template: " + templateName);
+                logger.info("Setting Legacy Template: " + templateName);
                 ObjectNode settings = (ObjectNode) globalMetadata.getTemplates().get(templateName);
-                System.out.println("Legacy Template Settings: " + settings);
                 String path = "_template/" + templateName;
                 createEntity(templateName, settings, connectionDetails, path);
             }
@@ -46,7 +50,7 @@ public class GlobalMetadataCreator_OS_2_11 {
 
             // Create each template
             for (String templateName : templateKeys) {
-                System.out.println("Setting Legacy Template: " + templateName);
+                logger.info("Setting Legacy Template: " + templateName);
                 ObjectNode settings = (ObjectNode) templates.get(templateName);
                 String path = "_template/" + templateName;
                 createEntity(templateName, settings, connectionDetails, path);
@@ -55,22 +59,22 @@ public class GlobalMetadataCreator_OS_2_11 {
     }
 
     public static void createComponentTemplates(GlobalMetadataData_OS_2_11 globalMetadata, ConnectionDetails connectionDetails, String[] indexTemplateWhitelist) throws Exception {
-        System.out.println("Setting Component Templates");
+        logger.info("Setting Component Templates");
         ObjectNode templates = globalMetadata.getComponentTemplates();
 
         if (templates == null){
-            System.out.println("No Component Templates");
+            logger.info("No Component Templates");
             return;
         }
 
         if (indexTemplateWhitelist != null) {            
             for (String templateName : indexTemplateWhitelist) {
                 if (!templates.has(templateName) || templates.get(templateName) == null) {
-                    System.out.println("Component Template not found: " + templateName);
+                    logger.warn("Component Template not found: " + templateName);
                     continue;
                 }
 
-                System.out.println("Setting Component Template: " + templateName);
+                logger.info("Setting Component Template: " + templateName);
                 ObjectNode settings = (ObjectNode) templates.get(templateName);
                 String path = "_component_template/" + templateName;
                 createEntity(templateName, settings, connectionDetails, path);
@@ -82,7 +86,7 @@ public class GlobalMetadataCreator_OS_2_11 {
 
             // Create each template
             for (String templateName : templateKeys) {
-                System.out.println("Setting Component Template: " + templateName);
+                logger.info("Setting Component Template: " + templateName);
                 ObjectNode settings = (ObjectNode) templates.get(templateName);
                 String path = "_component_template/" + templateName;
                 createEntity(templateName, settings, connectionDetails, path);
@@ -91,22 +95,22 @@ public class GlobalMetadataCreator_OS_2_11 {
     }
 
     public static void createIndexTemplates(GlobalMetadataData_OS_2_11 globalMetadata, ConnectionDetails connectionDetails, String[] indexTemplateWhitelist) throws Exception {
-        System.out.println("Setting Index Templates");
+        logger.info("Setting Index Templates");
         ObjectNode templates = globalMetadata.getIndexTemplates();
 
         if (templates == null){
-            System.out.println("No Index Templates");
+            logger.info("No Index Templates");
             return;
         }
 
         if (indexTemplateWhitelist != null) {
             for (String templateName : indexTemplateWhitelist) {
                 if (!templates.has(templateName) || templates.get(templateName) == null) {
-                    System.out.println("Index Template not found: " + templateName);
+                    logger.warn("Index Template not found: " + templateName);
                     continue;
                 }
 
-                System.out.println("Setting Index Template: " + templateName);
+                logger.info("Setting Index Template: " + templateName);
                 ObjectNode settings = (ObjectNode) globalMetadata.getIndexTemplates().get(templateName);
                 String path = "_index_template/" + templateName;
                 createEntity(templateName, settings, connectionDetails, path);
@@ -118,7 +122,7 @@ public class GlobalMetadataCreator_OS_2_11 {
 
             // Create each template
             for (String templateName : templateKeys) {
-                System.out.println("Setting Index Template: " + templateName);
+                logger.info("Setting Index Template: " + templateName);
                 ObjectNode settings = (ObjectNode) templates.get(templateName);
                 String path = "_index_template/" + templateName;
                 createEntity(templateName, settings, connectionDetails, path);

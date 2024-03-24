@@ -1,9 +1,13 @@
 package com.rfs.transformers;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class Transformer_ES_7_10_OS_2_11 implements Transformer {
+    private static final Logger logger = LogManager.getLogger(Transformer_ES_7_10_OS_2_11.class);
     private static final ObjectMapper mapper = new ObjectMapper();
     private int awarenessAttributeDimensionality;
 
@@ -18,11 +22,11 @@ public class Transformer_ES_7_10_OS_2_11 implements Transformer {
         ObjectNode templatesRoot = (ObjectNode) root.get("templates").deepCopy();
         templatesRoot.fieldNames().forEachRemaining(templateName -> {
             ObjectNode template = (ObjectNode) templatesRoot.get(templateName);
-            System.out.println("Transforming template: " + templateName);
-            System.out.println("Original template: " + template.toString());
+            logger.info("Transforming template: " + templateName);
+            logger.debug("Original template: " + template.toString());
             TransformFunctions.removeIntermediateIndexSettingsLevel(template); // run before fixNumberOfReplicas
             TransformFunctions.fixReplicasForDimensionality(templatesRoot, awarenessAttributeDimensionality);
-            System.out.println("Transformed template: " + template.toString());
+            logger.debug("Transformed template: " + template.toString());
             templatesRoot.set(templateName, template);
         });
         newRoot.set("templates", templatesRoot);
@@ -38,11 +42,11 @@ public class Transformer_ES_7_10_OS_2_11 implements Transformer {
                 return;
             }
 
-            System.out.println("Transforming template: " + templateName);
-            System.out.println("Original template: " + template.toString());
+            logger.info("Transforming template: " + templateName);
+            logger.debug("Original template: " + template.toString());
             TransformFunctions.removeIntermediateIndexSettingsLevel(templateSubRoot); // run before fixNumberOfReplicas
             TransformFunctions.fixReplicasForDimensionality(templateSubRoot, awarenessAttributeDimensionality);
-            System.out.println("Transformed template: " + template.toString());
+            logger.debug("Transformed template: " + template.toString());
             indexTemplateValuesRoot.set(templateName, template);
         });
         newRoot.set("index_template", indexTemplatesRoot);
@@ -63,8 +67,8 @@ public class Transformer_ES_7_10_OS_2_11 implements Transformer {
         TransformFunctions.removeIntermediateIndexSettingsLevel(newRoot); // run before fixNumberOfReplicas
         TransformFunctions.fixReplicasForDimensionality(newRoot, awarenessAttributeDimensionality);
 
-        System.out.println("Original Object: " + root.toString());
-        System.out.println("Transformed Object: " + newRoot.toString());
+        logger.debug("Original Object: " + root.toString());
+        logger.debug("Transformed Object: " + newRoot.toString());
         return newRoot;
     }
 }

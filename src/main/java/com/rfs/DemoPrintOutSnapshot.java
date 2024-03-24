@@ -207,7 +207,15 @@ public class DemoPrintOutSnapshot {
                     } else {
                         shardMetadata = new ShardMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                     }
-                    SnapshotShardUnpacker.unpack(shardMetadata, Paths.get(snapshotDirPath), Paths.get(luceneBasePathString));
+
+                    // Unpack the shard
+                    int bufferSize;
+                    if (sourceVersion == ClusterVersion.ES_6_8) {
+                        bufferSize = ElasticsearchConstants_ES_6_8.BUFFER_SIZE_IN_BYTES;
+                    } else {
+                        bufferSize = ElasticsearchConstants_ES_7_10.BUFFER_SIZE_IN_BYTES;
+                    }
+                    SnapshotShardUnpacker.unpack(shardMetadata, Paths.get(snapshotDirPath), Paths.get(luceneBasePathString), bufferSize);
 
                     // Now, read the documents back out
                     System.out.println("--- Reading docs in the shard ---");

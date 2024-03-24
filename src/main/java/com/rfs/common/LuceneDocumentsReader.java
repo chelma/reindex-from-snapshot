@@ -4,6 +4,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
@@ -11,6 +13,8 @@ import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
 
 public class LuceneDocumentsReader {
+    private static final Logger logger = LogManager.getLogger(LuceneDocumentsReader.class);
+
     public static List<Document> readDocuments(Path luceneFilesBasePath, String indexName, int shardId) throws Exception {
         Path indexDirectoryPath = luceneFilesBasePath.resolve(indexName).resolve(String.valueOf(shardId));
 
@@ -25,12 +29,12 @@ public class LuceneDocumentsReader {
                 BytesRef source_bytes = document.getBinaryValue("_source");
                 String id = Uid.decodeId(reader.document(i).getBinaryValue("_id").bytes);
                 if (source_bytes == null || source_bytes.bytes.length == 0) { // Skip deleted documents
-                    System.out.println("Document " + id + " is deleted or doesn't have the _source field enabled");
+                    logger.info("Document " + id + " is deleted or doesn't have the _source field enabled");
                     continue;
                 }
 
                 documents.add(document);
-                System.out.println("Document " + id + " read successfully");
+                logger.info("Document " + id + " read successfully");
             }
         }
 
