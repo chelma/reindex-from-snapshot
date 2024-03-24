@@ -1,4 +1,4 @@
-package com.rfs;
+package com.rfs.version_es_7_10;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,7 +12,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-public class SnapshotRepoData {
+import com.rfs.common.SnapshotRepo;
+
+public class SnapshotRepoData_ES_7_10 {
     private static Path findRepoFile(Path dir) throws IOException {
         Pattern pattern = Pattern.compile("^index-\\d+$");
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
@@ -25,14 +27,14 @@ public class SnapshotRepoData {
         return null; // No match found
     }
 
-    public static SnapshotRepoData fromRepoFile(Path filePath) throws IOException {
+    public static SnapshotRepoData_ES_7_10 fromRepoFile(Path filePath) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
-        SnapshotRepoData data = mapper.readValue(new File(filePath.toString()), SnapshotRepoData.class);
+        SnapshotRepoData_ES_7_10 data = mapper.readValue(new File(filePath.toString()), SnapshotRepoData_ES_7_10.class);
         data.filePath = filePath;
         return data;
     }
 
-    public static SnapshotRepoData fromRepoDir(Path dir) throws IOException {
+    public static SnapshotRepoData_ES_7_10 fromRepoDir(Path dir) throws IOException {
         Path file = findRepoFile(dir);
         if (file == null) {
             throw new IOException("No index file found in " + dir);
@@ -48,13 +50,21 @@ public class SnapshotRepoData {
     @JsonProperty("index_metadata_identifiers")
     public Map<String, String> indexMetadataIdentifiers;
 
-    public static class Snapshot {
+    public static class Snapshot implements SnapshotRepo.Snapshot {
         public String name;
         public String uuid;
         public int state;
         @JsonProperty("index_metadata_lookup")
         public Map<String, String> indexMetadataLookup;
         public String version;
+
+        public String getName() {
+            return name;
+        }
+
+        public String getId() {
+            return uuid;
+        }
     }
 
     public static class RawIndex {
@@ -64,7 +74,7 @@ public class SnapshotRepoData {
         public List<String> shardGenerations;
     }
 
-    public static class Index {
+    public static class Index implements SnapshotRepo.Index {
         public static Index fromRawIndex(String name, RawIndex rawIndex) {
             Index index = new Index();
             index.name = name;
@@ -78,6 +88,17 @@ public class SnapshotRepoData {
         public String id;
         public List<String> snapshots;
         public List<String> shardGenerations;
+
+        public String getName() {
+            return name;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public List<String> getSnapshots() {
+            return snapshots;
+        }
     }
 }
-

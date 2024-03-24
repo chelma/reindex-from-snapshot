@@ -1,4 +1,4 @@
-package com.rfs;
+package com.rfs.common;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -9,7 +9,6 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
-import org.elasticsearch.index.mapper.Uid;
 
 public class LuceneDocumentsReader {
     public static List<Document> readDocuments(Path luceneFilesBasePath, String indexName, int shardId) throws Exception {
