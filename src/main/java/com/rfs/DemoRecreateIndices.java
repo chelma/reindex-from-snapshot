@@ -9,11 +9,12 @@ import com.beust.jcommander.Parameter;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.rfs.common.ConnectionDetails;
 import com.rfs.common.GlobalMetadata;
-import com.rfs.common.IndexCreator;
 import com.rfs.common.IndexMetadata;
 import com.rfs.common.SnapshotMetadata;
 import com.rfs.common.SnapshotRepo;
-import com.rfs.common.Transformer;
+import com.rfs.transformers.Transformer;
+import com.rfs.transformers.Transformer_ES_6_8_to_OS_2_11;
+import com.rfs.transformers.Transformer_ES_7_10_OS_2_11;
 import com.rfs.common.ClusterVersion;
 import com.rfs.version_es_6_8.*;
 import com.rfs.version_es_7_10.*;
@@ -128,8 +129,7 @@ public class DemoRecreateIndices {
                     GlobalMetadataCreator_OS_2_11.create(transformedRoot, targetConnection, new String[0], templateWhitelist);
                 } else {
                     throw new IllegalArgumentException("Unsupported target version " + targetVersion + " for source version " + sourceVersion);
-                }
-                
+                }                
             } else if (sourceVersion == ClusterVersion.ES_7_10) {
                 if (targetVersion == ClusterVersion.OS_2_11) {
                     Transformer transformer = new Transformer_ES_7_10_OS_2_11(3);
@@ -141,27 +141,57 @@ public class DemoRecreateIndices {
                 }
             }
 
-            // // ==========================================================================================================
-            // // Read all the Index Metadata
-            // // ==========================================================================================================
-            // System.out.println("Attempting to read Index Metadata...");
-            // List<IndexMetadata.Data> indexMetadatas = new ArrayList<>();
-            // for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
-            //     System.out.println("Reading Index Metadata for index: " + index.getName());
-            //     IndexMetadataData_ES_6_8 indexMetadata = IndexMetadataFactory_ES_6_8.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());
-            //     indexMetadatas.add(indexMetadata);
-            // }
-            // System.out.println("Index Metadata read successfully");
+            // ==========================================================================================================
+            // Read all the Index Metadata
+            // ==========================================================================================================
+            System.out.println("Attempting to read Index Metadata...");
+            List<IndexMetadata.Data> indexMetadatas = new ArrayList<>();
+            for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
+                System.out.println("Reading Index Metadata for index: " + index.getName());
+                IndexMetadata.Data indexMetadata;
+                if (sourceVersion == ClusterVersion.ES_6_8) {
+                    indexMetadata = new IndexMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());
+                } else {
+                    indexMetadata = new IndexMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());
+                }
+                indexMetadatas.add(indexMetadata);
+            }
+            System.out.println("Index Metadata read successfully");
 
-            // // ==========================================================================================================
-            // // Recreate the indices
-            // // ==========================================================================================================
-            // System.out.println("Attempting to recreate the indices...");
-            // for (IndexMetadataData_ES_6_8 indexMetadata : indexMetadatas) {
-            //     String reindexName = indexMetadata.getName() + "_reindexed";
-            //     System.out.println("Recreating index " + indexMetadata.getName() + " as " + reindexName + " on target...");
-            //     IndexCreator.create(reindexName, indexMetadata, targetConnection, transformer);
-            // }
+            // ==========================================================================================================
+            // Recreate the indices
+            // ==========================================================================================================
+            System.out.println("Attempting to recreate the indices...");
+            for (IndexMetadata.Data indexMetadata : indexMetadatas) {
+                String reindexName = indexMetadata.getName() + "_reindexed";
+                System.out.println("Recreating index " + indexMetadata.getName() + " as " + reindexName + " on target...");
+
+                if (sourceVersion == ClusterVersion.ES_6_8) {
+                    if (targetVersion == ClusterVersion.OS_2_11) {
+                        Transformer transformer = new Transformer_ES_6_8_to_OS_2_11(3);
+                        ObjectNode root = indexMetadata.toObjectNode();
+                        ObjectNode transformedRoot = transformer.transformIndexMetadata(root);
+                        IndexMetadataData_OS_2_11 indexMetadataOS211 = new IndexMetadataData_OS_2_11(transformedRoot, indexMetadata.getId(), reindexName);
+                        IndexCreator_OS_2_11.create(reindexName, indexMetadataOS211, targetConnection);
+                    } else {
+                        throw new IllegalArgumentException("Unsupported target version " + targetVersion + " for source version " + sourceVersion);
+                    }                
+                } else if (sourceVersion == ClusterVersion.ES_7_10) {
+                    if (targetVersion == ClusterVersion.OS_2_11) {
+                        Transformer transformer = new Transformer_ES_7_10_OS_2_11(3);
+                        ObjectNode root = indexMetadata.toObjectNode();
+                        ObjectNode transformedRoot = transformer.transformIndexMetadata(root);
+                        IndexMetadataData_OS_2_11 indexMetadataOS211 = new IndexMetadataData_OS_2_11(transformedRoot, indexMetadata.getId(), reindexName);
+                        IndexCreator_OS_2_11.create(reindexName, indexMetadataOS211, targetConnection);
+                    } else {
+                        throw new IllegalArgumentException("Unsupported target version " + targetVersion + " for source version " + sourceVersion);
+                    }
+                }
+
+
+
+                // IndexCreator.create(reindexName, indexMetadata, targetConnection, transformer);
+            }
             
         } catch (Exception e) {
             e.printStackTrace();

@@ -1,8 +1,8 @@
 package com.rfs.version_es_6_8;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.rfs.transformers.TransformFunctions;
 
 public class IndexMetadataData_ES_6_8 implements com.rfs.common.IndexMetadata.Data {
     private ObjectNode root;
@@ -31,11 +31,9 @@ public class IndexMetadataData_ES_6_8 implements com.rfs.common.IndexMetadata.Da
         if (mappings != null) {
             return mappings;
         }
-
-        // Extract the mappings from their single-member list, will start like:
-        // [{"_doc":{"properties":{"address":{"type":"text"}}}}]
+        
         ArrayNode mappingsArray = (ArrayNode) root.get("mappings");
-        ObjectNode mappingsNode = (ObjectNode) mappingsArray.get(0).get("_doc");
+        ObjectNode mappingsNode = TransformFunctions.getMappingsFromBeneathIntermediate(mappingsArray);
         mappings = mappingsNode;
 
         return mappings;
@@ -54,27 +52,16 @@ public class IndexMetadataData_ES_6_8 implements com.rfs.common.IndexMetadata.Da
             return settings;
         }
 
-        // Turn dotted index settings into a tree, will start like:
-        // {"index.number_of_replicas":"1","index.number_of_shards":"5","index.version.created":"6082499"}
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode flatSettings = (ObjectNode) root.get("settings");
-        ObjectNode treeSettings = mapper.createObjectNode();
+        ObjectNode treeSettings = TransformFunctions.convertFlatSettingsToTree(
+            (ObjectNode) root.get("settings")
+        );
 
-        flatSettings.fields().forEachRemaining(entry -> {
-            String[] parts = entry.getKey().split("\\.");
-            ObjectNode current = treeSettings;
-
-            for (int i = 0; i < parts.length - 1; i++) {
-                if (!current.has(parts[i])) {
-                    current.set(parts[i], mapper.createObjectNode());
-                }
-                current = (ObjectNode) current.get(parts[i]);
-            }
-
-            current.set(parts[parts.length - 1], entry.getValue());
-        });
         settings = treeSettings;
 
         return settings;
+    }
+
+    public ObjectNode toObjectNode() {
+        return root;
     }
 }

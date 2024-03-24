@@ -52,6 +52,7 @@ public class IndexMetadata {
         public String getName();
         public int getNumberOfShards();
         public ObjectNode getSettings();
+        public ObjectNode toObjectNode();
     }
     
 }
