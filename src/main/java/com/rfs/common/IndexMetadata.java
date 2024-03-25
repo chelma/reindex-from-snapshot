@@ -13,6 +13,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 
 public class IndexMetadata {
+
+    /**
+    * Defines the behavior required to read a snapshot's index metadata as JSON and convert it into a Data object
+    */
     public static interface Factory {
         private JsonNode getJsonNode(SnapshotRepo.Provider repoDataProvider, String indexId, String indexFileId, SmileFactory smileFactory) throws Exception {
             String indexDirPath = repoDataProvider.getSnapshotDirPath() + "/indices/" + indexId;
@@ -45,6 +49,11 @@ public class IndexMetadata {
         public String getIndexFileId(SnapshotRepo.Provider repoDataProvider, String snapshotName, String indexName);
     }
 
+    /**
+    * Defines the behavior expected of an object that will surface the metadata of an index stored in a snapshot
+    * See: https://github.com/elastic/elasticsearch/blob/v7.10.2/server/src/main/java/org/elasticsearch/cluster/metadata/IndexMetadata.java#L1475
+    * See: https://github.com/elastic/elasticsearch/blob/v6.8.23/server/src/main/java/org/elasticsearch/cluster/metadata/IndexMetaData.java#L1284
+    */
     public static interface Data {
         public ObjectNode getAliases();
         public String getId();

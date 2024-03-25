@@ -4,6 +4,10 @@ import java.nio.file.Path;
 import java.util.List;
 
 public class SnapshotRepo {
+
+    /**
+     * Defines the behavior required to surface a snapshot repo's metadata
+     */
     public static interface Provider {
         // Returns the path to the snapshot directory
         public Path getSnapshotDirPath();
@@ -22,11 +26,17 @@ public class SnapshotRepo {
         
     }
 
+    /**
+     * Defines the behavior required to surface the details of a snapshot in a snapshot repo's metadata
+     */
     public static interface Snapshot {
         String getName();
         String getId();
     }
 
+    /**
+     * Defines the behavior required to surface the details of a index in a snapshot repo's metadata
+     */
     public static interface Index {
         String getName();
         String getId();

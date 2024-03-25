@@ -3,6 +3,9 @@ package com.rfs.common;
 import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.ParameterException;
 
+/**
+ * An enumerated type used to refer to the software versions of the source and target clusters.
+ */
 public enum ClusterVersion {
     ES_6_8, ES_7_10, OS_2_11;
 

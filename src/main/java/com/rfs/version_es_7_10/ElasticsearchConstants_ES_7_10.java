@@ -11,10 +11,10 @@ public class ElasticsearchConstants_ES_7_10 {
     public static final SmileFactory SMILE_FACTORY;
 
     static {
-        // https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/common/blobstore/fs/FsBlobStore.java#L49
-        BUFFER_SIZE_IN_BYTES = 102400; // Default buffer sizeÍ
+        // https://github.com/elastic/elasticsearch/blob/7.10/server/src/main/java/org/elasticsearch/repositories/blobstore/BlobStoreRepository.java#L209
+        BUFFER_SIZE_IN_BYTES = 128 * 1024; // Default buffer size
 
-        // Taken from: https://github.com/elastic/elasticsearch/blob/6.8/libs/x-content/src/main/java/org/elasticsearch/common/xcontent/smile/SmileXContent.java#L55
+        // Taken from: https://github.com/elastic/elasticsearch/blob/7.10/libs/x-content/src/main/java/org/elasticsearch/common/xcontent/smile/SmileXContent.java#L54
         SmileFactory smileFactory = new SmileFactory();
         smileFactory.configure(SmileGenerator.Feature.ENCODE_BINARY_AS_7BIT, false);
         smileFactory.configure(SmileFactory.Feature.FAIL_ON_SYMBOL_HASH_OVERFLOW, false);

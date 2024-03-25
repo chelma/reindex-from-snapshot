@@ -14,6 +14,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 
 public class ShardMetadata {
+
+    /**
+    * Defines the behavior required to read a snapshot's shard metadata as JSON and convert it into a Data object
+    */
     public static interface Factory {
         private JsonNode getJsonNode(SnapshotRepo.Provider repoDataProvider, String snapshotId, String indexId, int shardId, SmileFactory smileFactory) throws Exception {
             String shardDirPath = repoDataProvider.getSnapshotDirPath() + "/indices/" + indexId + "/" + shardId;
@@ -45,6 +49,11 @@ public class ShardMetadata {
         public SmileFactory getSmileFactory();
     }
 
+    /**
+    * Defines the behavior expected of an object that will surface the metadata of an shard stored in a snapshot
+    * See: https://github.com/elastic/elasticsearch/blob/7.10/server/src/main/java/org/elasticsearch/index/snapshots/blobstore/BlobStoreIndexShardSnapshot.java#L510
+    * See: https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/index/snapshots/blobstore/BlobStoreIndexShardSnapshot.java#L508
+    */
     public static interface Data {
         public String getSnapshotName();    
         public String getIndexName();    
@@ -58,6 +67,11 @@ public class ShardMetadata {
         public List<FileInfo> getFiles();
     }
 
+    /**
+    * Defines the behavior expected of an object that will surface the metadata of an file stored in a snapshot
+    * See: https://github.com/elastic/elasticsearch/blob/7.10/server/src/main/java/org/elasticsearch/index/snapshots/blobstore/BlobStoreIndexShardSnapshot.java#L277
+    * See: https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/index/snapshots/blobstore/BlobStoreIndexShardSnapshot.java#L281
+    */
     public static interface FileInfo {
         public String getName();
         public String getPhysicalName();

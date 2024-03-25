@@ -131,7 +131,6 @@ public class ReindexFromSnapshot {
             } else {
                 snapshotMetadata = new SnapshotMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
             }
-            System.out.println(snapshotMetadata.getVersionId());
             logger.info("Snapshot data read successfully");
 
             if (!snapshotMetadata.isIncludeGlobalState() && ((movementType == MovementType.EVERYTHING) || (movementType == MovementType.METADATA))){

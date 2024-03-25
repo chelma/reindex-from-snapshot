@@ -3,6 +3,9 @@ package com.rfs.common;
 import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.ParameterException;
 
+/*
+ * An enumerated type used to refer to the type of data movement operation being performed
+ */
 public enum MovementType {
     EVERYTHING, METADATA, DATA;
 

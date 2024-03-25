@@ -11,8 +11,9 @@ public class ElasticsearchConstants_ES_6_8 {
     public static final SmileFactory SMILE_FACTORY;
 
     static {
+        // Taken from a running ES 6.8 process
         // https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/common/blobstore/fs/FsBlobStore.java#L49
-        BUFFER_SIZE_IN_BYTES = 102400; // Default buffer sizeÍ
+        BUFFER_SIZE_IN_BYTES = 102400; // Default buffer size
 
         // Taken from: https://github.com/elastic/elasticsearch/blob/6.8/libs/x-content/src/main/java/org/elasticsearch/common/xcontent/smile/SmileXContent.java#L55
         SmileFactory smileFactory = new SmileFactory();

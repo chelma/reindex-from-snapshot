@@ -12,7 +12,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 
+
 public class GlobalMetadata {
+    /**
+    * Defines the behavior required to read a snapshot's global metadata as JSON and convert it into a Data object
+    */
     public static interface Factory {
         private JsonNode getJsonNode(SnapshotRepo.Provider repoDataProvider, String snapshotName, SmileFactory smileFactory) throws Exception {
             String snapshotId = repoDataProvider.getSnapshotId(snapshotName);
@@ -43,10 +47,19 @@ public class GlobalMetadata {
             JsonNode root = getJsonNode(repoDataProvider, snapshotName, smileFactory);
             return fromJsonNode(root);
         }
+
+        // Version-specific implementation
         public GlobalMetadata.Data fromJsonNode(JsonNode root) throws Exception;
+
+        // Version-specific implementation
         public SmileFactory getSmileFactory();
     }
 
+    /**
+    * Defines the behavior expected of an object that will surface the global metadata of a snapshot
+    * See: https://github.com/elastic/elasticsearch/blob/v7.10.2/server/src/main/java/org/elasticsearch/cluster/metadata/Metadata.java#L1622
+    * See: https://github.com/elastic/elasticsearch/blob/v6.8.23/server/src/main/java/org/elasticsearch/cluster/metadata/MetaData.java#L1214
+    */
     public static interface Data {
         public ObjectNode toObjectNode() throws Exception;
     }

@@ -15,6 +15,9 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 
 public class SnapshotMetadata {
 
+    /**
+    * Defines the behavior required to read a snapshot metadata as JSON and convert it into a Data object
+    */
     public static interface Factory {
         private JsonNode getJsonNode(SnapshotRepo.Provider repoDataProvider, String snapshotName, SmileFactory smileFactory) throws Exception {
             String snapshotId = repoDataProvider.getSnapshotId(snapshotName);
@@ -50,8 +53,9 @@ public class SnapshotMetadata {
     }
 
     /**
-     * The snapshot data
-     * See: https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/snapshots/SnapshotInfo.java
+     * Defines the behavior expected of an object that will surface the metadata of a snapshot
+     * See: https://github.com/elastic/elasticsearch/blob/7.10/server/src/main/java/org/elasticsearch/snapshots/SnapshotInfo.java#L615
+     * See: https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/snapshots/SnapshotInfo.java#L583
      */
     public static interface Data {
         public String getName();    

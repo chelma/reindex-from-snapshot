@@ -5,7 +5,7 @@ import java.util.Base64;
 
 import org.apache.lucene.util.BytesRef;
 
-/*
+/**
  * This class is a cut-down copy of the org.elasticsearch.index.mapper.Uid class from the Elasticsearch project.
  * See: https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/index/mapper/Uid.java#L32
  */
