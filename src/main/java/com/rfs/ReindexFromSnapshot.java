@@ -106,6 +106,12 @@ public class ReindexFromSnapshot {
             } else {
                 repoDataProvider = new SnapshotRepoProvider_ES_7_10(snapshotDirPath);
             }
+
+            if (repoDataProvider.getSnapshots().size() > 1){
+                // Avoid having to deal with things like incremental snapshots
+                throw new IllegalArgumentException("Only repos with a single snapshot are supported at this time");
+            }
+
             logger.info("Repo data read successfully");
 
             // // ==========================================================================================================
@@ -125,7 +131,22 @@ public class ReindexFromSnapshot {
             } else {
                 snapshotMetadata = new SnapshotMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
             }
+            System.out.println(snapshotMetadata.getVersionId());
             logger.info("Snapshot data read successfully");
+
+            if (!snapshotMetadata.isIncludeGlobalState() && ((movementType == MovementType.EVERYTHING) || (movementType == MovementType.METADATA))){
+                throw new IllegalArgumentException("Snapshot does not include global state, so we can't move metadata");
+            }
+
+            if (!"SUCCESS".equals(snapshotMetadata.getState())){
+                throw new IllegalArgumentException("Snapshot state is " + snapshotMetadata.getState() + ", must be 'SUCCESS'");
+            }
+
+            // We might not actually get this far if the snapshot is the wrong version; we'll probably have failed to
+            // parse one of the previous metadata files
+            if (sourceVersion != ClusterVersion.fromInt(snapshotMetadata.getVersionId())){
+                throw new IllegalArgumentException("Snapshot version is " + snapshotMetadata.getVersionId() + ", but source version is " + sourceVersion);
+            }
 
             if ((movementType == MovementType.EVERYTHING) || (movementType == MovementType.METADATA)){
                 // ==========================================================================================================

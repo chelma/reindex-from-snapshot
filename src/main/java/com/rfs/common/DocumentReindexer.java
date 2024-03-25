@@ -35,6 +35,6 @@ public class DocumentReindexer {
 
         // Send the request
         RestClient client = new RestClient(targetConnection);
-        client.put(path, body);
+        client.put(path, body, false);
     }
 }

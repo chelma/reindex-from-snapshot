@@ -1,5 +1,6 @@
 package com.rfs.version_os_2_11;
 
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -134,8 +135,16 @@ public class GlobalMetadataCreator_OS_2_11 {
         // Assemble the request details
         String body = settings.toString();
 
-        // Send the request
+        // Confirm the index doesn't already exist, then create it
         RestClient client = new RestClient(connectionDetails);
-        client.put(path, body);
+        int getResponseCode = client.get(path, true);
+        if (getResponseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+            String bodyString = body.toString();
+            client.put(path, bodyString, false);
+        } else if (getResponseCode == HttpURLConnection.HTTP_OK) {
+            logger.warn(entityName + " already exists. Skipping creation.");
+        } else {
+            logger.warn("Could not confirm that " + entityName + " does not already exist. Skipping creation.");
+        }
     }
 }

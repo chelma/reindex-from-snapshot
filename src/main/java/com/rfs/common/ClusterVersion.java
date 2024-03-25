@@ -21,4 +21,15 @@ public enum ClusterVersion {
             }
         }
     }
+
+    public static ClusterVersion fromInt(int versionId) {
+        String versionString = Integer.toString(versionId);
+        if (versionString.startsWith("608")){
+            return ES_6_8;
+        } else if (versionString.startsWith("710")){
+            return ES_7_10;
+        } else {
+            throw new IllegalArgumentException("Invalid version: " + versionId);
+        }
+    }
 }
