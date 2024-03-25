@@ -3,9 +3,9 @@ package com.rfs.common;
 import org.apache.lucene.codecs.CodecUtil;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Path;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,11 +18,10 @@ public class IndexMetadata {
     * Defines the behavior required to read a snapshot's index metadata as JSON and convert it into a Data object
     */
     public static interface Factory {
-        private JsonNode getJsonNode(SnapshotRepo.Provider repoDataProvider, String indexId, String indexFileId, SmileFactory smileFactory) throws Exception {
-            String indexDirPath = repoDataProvider.getSnapshotDirPath() + "/indices/" + indexId;
-            String filePath = indexDirPath + "/meta-" + indexFileId + ".dat";
+        private JsonNode getJsonNode(SourceRepo repo, SnapshotRepo.Provider repoDataProvider, String indexId, String indexFileId, SmileFactory smileFactory) throws Exception {
+            Path filePath = repo.getIndexMetadataFilePath(indexId, indexFileId);
     
-            try (InputStream fis = new FileInputStream(new File(filePath))) {
+            try (InputStream fis = new FileInputStream(filePath.toFile())) {
                 // Don't fully understand what the value of this code is, but it progresses the stream so we need to do it
                 // See: https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/ChecksumBlobStoreFormat.java#L100
                 byte[] bytes = fis.readAllBytes();
@@ -37,11 +36,11 @@ public class IndexMetadata {
             }
         }
 
-        default IndexMetadata.Data fromSnapshotRepoDataProvider(SnapshotRepo.Provider repoDataProvider, String snapshotName, String indexName) throws Exception {
+        default IndexMetadata.Data fromRepo(SourceRepo repo, SnapshotRepo.Provider repoDataProvider, String snapshotName, String indexName) throws Exception {
             SmileFactory smileFactory = getSmileFactory();
             String indexId = repoDataProvider.getIndexId(indexName);
             String indexFileId = getIndexFileId(repoDataProvider, snapshotName, indexName);
-            JsonNode root = getJsonNode(repoDataProvider, indexId, indexFileId, smileFactory);            
+            JsonNode root = getJsonNode(repo, repoDataProvider, indexId, indexFileId, smileFactory);            
             return fromJsonNode(root, indexId, indexName);
         }
         public IndexMetadata.Data fromJsonNode(JsonNode root, String indexId, String indexName) throws Exception;

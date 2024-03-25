@@ -17,12 +17,9 @@ import org.apache.lucene.util.BytesRef;
 public class SnapshotShardUnpacker {
     private static final Logger logger = LogManager.getLogger(SnapshotShardUnpacker.class);
 
-    public static void unpack(ShardMetadata.Data shardMetadata, Path snapshotBasePath, Path luceneFilesBasePath, int bufferSize) throws Exception {
+    public static void unpack(SourceRepo repo, ShardMetadata.Data shardMetadata, Path luceneFilesBasePath, int bufferSize) throws Exception {
         // Some constants
         NativeFSLockFactory lockFactory = NativeFSLockFactory.INSTANCE;
-
-        // Get the path to the shard's blob files
-        Path shardDirPath = Paths.get(snapshotBasePath + "/indices/" + shardMetadata.getIndexId() + "/" + shardMetadata.getShardId());
 
         // Create the directory for the shard's lucene files
         Path luceneIndexDir = Paths.get(luceneFilesBasePath + "/" + shardMetadata.getIndexName() + "/" + shardMetadata.getShardId());
@@ -37,7 +34,7 @@ public class SnapshotShardUnpacker {
                 final BytesRef hash = fileMetadata.getMetaHash();
                 indexOutput.writeBytes(hash.bytes, hash.offset, hash.length);
             } else {
-                try (InputStream stream = new PartSliceStream(shardDirPath, fileMetadata)) {
+                try (InputStream stream = new PartSliceStream(repo, fileMetadata, shardMetadata.getIndexId(), shardMetadata.getShardId())) {
                     final byte[] buffer = new byte[Math.toIntExact(Math.min(bufferSize, fileMetadata.getLength()))];
                     int length;
                     while ((length = stream.read(buffer)) > 0) {

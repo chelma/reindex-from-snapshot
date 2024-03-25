@@ -12,6 +12,8 @@ repositories {
 
 dependencies {
     implementation 'com.beust:jcommander:1.81'
+    implementation 'org.apache.logging.log4j:log4j-api:2.14.1'
+    implementation 'org.apache.logging.log4j:log4j-core:2.14.1'
     implementation 'org.apache.lucene:lucene-core:8.7.0'
     implementation 'org.apache.lucene:lucene-analyzers-common:8.7.0'
     implementation 'org.apache.lucene:lucene-backward-codecs:8.7.0'
@@ -19,22 +21,11 @@ dependencies {
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-smile:2.12.3'
     implementation 'com.fasterxml.jackson.core:jackson-annotations:2.12.3'
     implementation 'com.fasterxml.jackson.core:jackson-core:2.12.3'
-    implementation 'org.apache.logging.log4j:log4j-api:2.14.1'
-    implementation 'org.apache.logging.log4j:log4j-core:2.14.1'
+    implementation 'software.amazon.awssdk:s3:2.25.16'
 }
 
 application {
     mainClassName = 'com.rfs.ReindexFromSnapshot'
-}
-
-task demoRecreateIndices(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
-    main = 'com.rfs.DemoRecreateIndices'
-}
-
-task demoReindexDocuments(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
-    main = 'com.rfs.DemoReindexDocuments'
 }
 
 task demoPrintOutSnapshot(type: JavaExec) {

@@ -1,6 +1,5 @@
 package com.rfs.common;
 
-import java.nio.file.Path;
 import java.util.List;
 
 public class SnapshotRepo {
@@ -8,10 +7,7 @@ public class SnapshotRepo {
     /**
      * Defines the behavior required to surface a snapshot repo's metadata
      */
-    public static interface Provider {
-        // Returns the path to the snapshot directory
-        public Path getSnapshotDirPath();
-    
+    public static interface Provider {    
         // Returns a list of all snapshots in the snapshot repository
         public List<SnapshotRepo.Snapshot> getSnapshots();
     

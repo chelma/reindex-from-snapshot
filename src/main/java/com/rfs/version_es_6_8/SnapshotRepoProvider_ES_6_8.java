@@ -1,22 +1,18 @@
 package com.rfs.version_es_6_8;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.rfs.common.SourceRepo;
 import com.rfs.common.SnapshotRepo;
 
 public class SnapshotRepoProvider_ES_6_8 implements SnapshotRepo.Provider {
     private final SnapshotRepoData_ES_6_8 repoData;
 
-    public SnapshotRepoProvider_ES_6_8(Path dirPath) throws IOException{
-        this.repoData = SnapshotRepoData_ES_6_8.fromRepoDir(dirPath);
-    }
-
-    public Path getSnapshotDirPath() {
-        return repoData.filePath.getParent();
+    public SnapshotRepoProvider_ES_6_8(SourceRepo repo) throws IOException{
+        this.repoData = SnapshotRepoData_ES_6_8.fromRepo(repo);
     }
 
     public List<SnapshotRepoData_ES_6_8.Index> getIndices() {

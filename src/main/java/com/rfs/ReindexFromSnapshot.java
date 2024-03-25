@@ -26,8 +26,17 @@ public class ReindexFromSnapshot {
         @Parameter(names = {"-n", "--snapshot-name"}, description = "The name of the snapshot to read", required = true)
         public String snapshotName;
 
-        @Parameter(names = {"-d", "--snapshot-dir"}, description = "The absolute path to the snapshot directory", required = true)
-        public String snapshotDirPath;
+        @Parameter(names = {"--snapshot-dir"}, description = "The absolute path to the source snapshot directory on local disk", required = false)
+        public String snapshotDirPath = null;
+
+        @Parameter(names = {"--s3-local-dir"}, description = "The absolute path to the directory on local disk to write S3 files to", required = false)
+        public String s3LocalDirPath = null;
+
+        @Parameter(names = {"--s3-repo-uri"}, description = "The S3 URI of the snapshot repo, like: s3://my-bucket/dir1/dir2", required = false)
+        public String s3RepoUri = null;
+
+        @Parameter(names = {"--s3-region"}, description = "The AWS Region the S3 bucket is in, like: us-east-2", required = false)
+        public String s3Region = null;
 
         @Parameter(names = {"-l", "--lucene-dir"}, description = "The absolute path to the directory where we'll put the Lucene docs", required = true)
         public String luceneDirPath;
@@ -63,7 +72,10 @@ public class ReindexFromSnapshot {
             .parse(args);
         
         String snapshotName = arguments.snapshotName;
-        Path snapshotDirPath = Paths.get(arguments.snapshotDirPath);
+        Path snapshotDirPath = (arguments.snapshotDirPath != null) ? Paths.get(arguments.snapshotDirPath) : null;
+        Path s3LocalDirPath = (arguments.s3LocalDirPath != null) ? Paths.get(arguments.s3LocalDirPath) : null;
+        String s3RepoUri = arguments.s3RepoUri;
+        String s3Region = arguments.s3Region;
         Path luceneDirPath = Paths.get(arguments.luceneDirPath);
         String targetHost = arguments.targetHost;
         String targetUser = arguments.targetUser;
@@ -91,6 +103,15 @@ public class ReindexFromSnapshot {
             throw new IllegalArgumentException("Unsupported target version: " + sourceVersion);
         }
 
+        SourceRepo repo;
+        if (snapshotDirPath != null) {
+            repo = new FilesystemRepo(snapshotDirPath);
+        } else if (s3RepoUri != null && s3Region != null && s3LocalDirPath != null) {
+            repo = new S3Repo(s3LocalDirPath, s3RepoUri, s3Region);
+        } else {
+            throw new IllegalArgumentException("You must specify either a snapshot directory or an S3 URI");
+        }
+
         // Set the transformer
         Transformer transformer = TransformFunctions.getTransformer(sourceVersion, targetVersion, awarenessAttributeDimensionality);
 
@@ -102,9 +123,9 @@ public class ReindexFromSnapshot {
             logger.info("Attempting to read Repo data file...");
             SnapshotRepo.Provider repoDataProvider;
             if (sourceVersion == ClusterVersion.ES_6_8) {
-                repoDataProvider = new SnapshotRepoProvider_ES_6_8(snapshotDirPath);
+                repoDataProvider = new SnapshotRepoProvider_ES_6_8(repo);
             } else {
-                repoDataProvider = new SnapshotRepoProvider_ES_7_10(snapshotDirPath);
+                repoDataProvider = new SnapshotRepoProvider_ES_7_10(repo);
             }
 
             if (repoDataProvider.getSnapshots().size() > 1){
@@ -114,9 +135,9 @@ public class ReindexFromSnapshot {
 
             logger.info("Repo data read successfully");
 
-            // // ==========================================================================================================
-            // // Read the Snapshot details
-            // // ==========================================================================================================
+            // ==========================================================================================================
+            // Read the Snapshot details
+            // ==========================================================================================================
             logger.info("==================================================================");
             logger.info("Attempting to read Snapshot details...");
             String snapshotIdString = repoDataProvider.getSnapshotId(snapshotName);
@@ -127,9 +148,9 @@ public class ReindexFromSnapshot {
             }
             SnapshotMetadata.Data snapshotMetadata;
             if (sourceVersion == ClusterVersion.ES_6_8) {
-                snapshotMetadata = new SnapshotMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+                snapshotMetadata = new SnapshotMetadataFactory_ES_6_8().fromRepo(repo, repoDataProvider, snapshotName);
             } else {
-                snapshotMetadata = new SnapshotMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+                snapshotMetadata = new SnapshotMetadataFactory_ES_7_10().fromRepo(repo, repoDataProvider, snapshotName);
             }
             logger.info("Snapshot data read successfully");
 
@@ -155,9 +176,9 @@ public class ReindexFromSnapshot {
                 logger.info("Attempting to read Global Metadata details...");
                 GlobalMetadata.Data globalMetadata;
                 if (sourceVersion == ClusterVersion.ES_6_8) {
-                    globalMetadata = new GlobalMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+                    globalMetadata = new GlobalMetadataFactory_ES_6_8().fromRepo(repo, repoDataProvider, snapshotName);
                 } else {
-                    globalMetadata = new GlobalMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+                    globalMetadata = new GlobalMetadataFactory_ES_7_10().fromRepo(repo, repoDataProvider, snapshotName);
                 }
                 logger.info("Global Metadata read successfully");
 
@@ -188,9 +209,9 @@ public class ReindexFromSnapshot {
                 logger.info("Reading Index Metadata for index: " + index.getName());
                 IndexMetadata.Data indexMetadata;
                 if (sourceVersion == ClusterVersion.ES_6_8) {
-                    indexMetadata = new IndexMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());
+                    indexMetadata = new IndexMetadataFactory_ES_6_8().fromRepo(repo, repoDataProvider, snapshotName, index.getName());
                 } else {
-                    indexMetadata = new IndexMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());
+                    indexMetadata = new IndexMetadataFactory_ES_7_10().fromRepo(repo, repoDataProvider, snapshotName, index.getName());
                 }
                 indexMetadatas.add(indexMetadata);
             }
@@ -228,9 +249,9 @@ public class ReindexFromSnapshot {
                         // Get the shard metadata
                         ShardMetadata.Data shardMetadata;
                         if (sourceVersion == ClusterVersion.ES_6_8) {
-                            shardMetadata = new ShardMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                            shardMetadata = new ShardMetadataFactory_ES_6_8().fromRepo(repo, repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                         } else {
-                            shardMetadata = new ShardMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                            shardMetadata = new ShardMetadataFactory_ES_7_10().fromRepo(repo, repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                         }
 
                         // Unpack the shard
@@ -241,7 +262,7 @@ public class ReindexFromSnapshot {
                             bufferSize = ElasticsearchConstants_ES_7_10.BUFFER_SIZE_IN_BYTES;
                         }
 
-                        SnapshotShardUnpacker.unpack(shardMetadata, snapshotDirPath, luceneDirPath, bufferSize);
+                        SnapshotShardUnpacker.unpack(repo, shardMetadata, luceneDirPath, bufferSize);
                     }
                 }
 

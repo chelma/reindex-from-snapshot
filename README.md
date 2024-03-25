@@ -112,5 +112,5 @@ PASSWORD=<Amazon OpenSearch Domain master password>
 
 gradle build
 
-gradle run --args='-n global_state_snapshot -d $SNAPSHOT_DIR -l $LUCENE_DIR -h $HOSTNAME  -u $USERNAME -p $PASSWORD -s es_6_8 -t os_2_11 --movement-type everything'
+gradle run --args='-n global_state_snapshot --snapshot-dir $SNAPSHOT_DIR -l $LUCENE_DIR -h $HOSTNAME  -u $USERNAME -p $PASSWORD -s es_6_8 -t os_2_11 --movement-type everything'
 ```

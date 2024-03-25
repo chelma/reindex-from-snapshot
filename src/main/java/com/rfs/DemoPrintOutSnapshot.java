@@ -21,11 +21,13 @@ import com.rfs.common.Uid;
 import com.rfs.version_es_6_8.*;
 import com.rfs.common.GlobalMetadata;
 import com.rfs.common.IndexMetadata;
+import com.rfs.common.SourceRepo;
 import com.rfs.common.ShardMetadata;
 import com.rfs.common.SnapshotMetadata;
 import com.rfs.common.SnapshotRepo;
 import com.rfs.common.SnapshotShardUnpacker;
 import com.rfs.common.ClusterVersion;
+import com.rfs.common.FilesystemRepo;
 import com.rfs.version_es_7_10.*;
 
 public class DemoPrintOutSnapshot {
@@ -60,6 +62,8 @@ public class DemoPrintOutSnapshot {
             throw new IllegalArgumentException("Unsupported source version: " + sourceVersion);
         }
 
+        SourceRepo repo = new FilesystemRepo(Path.of(snapshotDirPath));
+
         try {
             // ==========================================================================================================
             // Read the Repo data file
@@ -69,9 +73,9 @@ public class DemoPrintOutSnapshot {
 
             SnapshotRepo.Provider repoDataProvider;
             if (sourceVersion == ClusterVersion.ES_6_8) {
-                repoDataProvider = new SnapshotRepoProvider_ES_6_8(Paths.get(snapshotDirPath));
+                repoDataProvider = new SnapshotRepoProvider_ES_6_8(repo);
             } else {
-                repoDataProvider = new SnapshotRepoProvider_ES_7_10(Paths.get(snapshotDirPath));
+                repoDataProvider = new SnapshotRepoProvider_ES_7_10(repo);
             }
 
             System.out.println("--- Snapshots ---");
@@ -99,9 +103,9 @@ public class DemoPrintOutSnapshot {
 
             SnapshotMetadata.Data snapshotMetadata;
             if (sourceVersion == ClusterVersion.ES_6_8) {
-                snapshotMetadata = new SnapshotMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+                snapshotMetadata = new SnapshotMetadataFactory_ES_6_8().fromRepo(repo, repoDataProvider, snapshotName);
             } else {
-                snapshotMetadata = new SnapshotMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+                snapshotMetadata = new SnapshotMetadataFactory_ES_7_10().fromRepo(repo, repoDataProvider, snapshotName);
             }
 
             System.out.println("Snapshot Metadata State: " + snapshotMetadata.getState());
@@ -119,9 +123,9 @@ public class DemoPrintOutSnapshot {
 
             GlobalMetadata.Data globalMetadata;
             if (sourceVersion == ClusterVersion.ES_6_8) {
-                globalMetadata = new GlobalMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+                globalMetadata = new GlobalMetadataFactory_ES_6_8().fromRepo(repo, repoDataProvider, snapshotName);
             } else {
-                globalMetadata = new GlobalMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+                globalMetadata = new GlobalMetadataFactory_ES_7_10().fromRepo(repo, repoDataProvider, snapshotName);
             }
 
             if (sourceVersion == ClusterVersion.ES_6_8) { 
@@ -151,12 +155,12 @@ public class DemoPrintOutSnapshot {
             Map<String, IndexMetadata.Data> indexMetadatas = new HashMap<>();
             if (sourceVersion == ClusterVersion.ES_6_8) {
                 for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
-                    IndexMetadata.Data indexMetadata = new IndexMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());
+                    IndexMetadata.Data indexMetadata = new IndexMetadataFactory_ES_6_8().fromRepo(repo, repoDataProvider, snapshotName, index.getName());
                     indexMetadatas.put(index.getName(), indexMetadata);
                 }
             } else {
                 for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
-                    IndexMetadata.Data indexMetadata = new IndexMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());
+                    IndexMetadata.Data indexMetadata = new IndexMetadataFactory_ES_7_10().fromRepo(repo, repoDataProvider, snapshotName, index.getName());
                     indexMetadatas.put(index.getName(), indexMetadata);
                 }
             }
@@ -185,9 +189,9 @@ public class DemoPrintOutSnapshot {
                     // Get the file mapping for the shard
                     ShardMetadata.Data shardMetadata;
                     if (sourceVersion == ClusterVersion.ES_6_8) {
-                        shardMetadata = new ShardMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                        shardMetadata = new ShardMetadataFactory_ES_6_8().fromRepo(repo, repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                     } else {
-                        shardMetadata = new ShardMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                        shardMetadata = new ShardMetadataFactory_ES_7_10().fromRepo(repo, repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                     }
                     System.out.println("Shard Metadata: " + shardMetadata.toString());
                 }
@@ -203,9 +207,9 @@ public class DemoPrintOutSnapshot {
                 for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
                     ShardMetadata.Data shardMetadata;
                     if (sourceVersion == ClusterVersion.ES_6_8) {
-                        shardMetadata = new ShardMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                        shardMetadata = new ShardMetadataFactory_ES_6_8().fromRepo(repo, repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                     } else {
-                        shardMetadata = new ShardMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                        shardMetadata = new ShardMetadataFactory_ES_7_10().fromRepo(repo, repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                     }
 
                     // Unpack the shard
@@ -215,7 +219,7 @@ public class DemoPrintOutSnapshot {
                     } else {
                         bufferSize = ElasticsearchConstants_ES_7_10.BUFFER_SIZE_IN_BYTES;
                     }
-                    SnapshotShardUnpacker.unpack(shardMetadata, Paths.get(snapshotDirPath), Paths.get(luceneBasePathString), bufferSize);
+                    SnapshotShardUnpacker.unpack(repo, shardMetadata, Paths.get(luceneBasePathString), bufferSize);
 
                     // Now, read the documents back out
                     System.out.println("--- Reading docs in the shard ---");

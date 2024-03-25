@@ -5,28 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
+import com.rfs.common.SourceRepo;
 import com.rfs.common.SnapshotRepo;
 
 public class SnapshotRepoData_ES_7_10 {
-    private static Path findRepoFile(Path dir) throws IOException {
-        Pattern pattern = Pattern.compile("^index-\\d+$");
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
-            for (Path entry : stream) {
-                if (Files.isRegularFile(entry) && pattern.matcher(entry.getFileName().toString()).matches()) {
-                    return entry; // There should only be one match
-                }
-            }
-        }
-        return null; // No match found
-    }
-
     public static SnapshotRepoData_ES_7_10 fromRepoFile(Path filePath) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         SnapshotRepoData_ES_7_10 data = mapper.readValue(new File(filePath.toString()), SnapshotRepoData_ES_7_10.class);
@@ -34,10 +20,10 @@ public class SnapshotRepoData_ES_7_10 {
         return data;
     }
 
-    public static SnapshotRepoData_ES_7_10 fromRepoDir(Path dir) throws IOException {
-        Path file = findRepoFile(dir);
+    public static SnapshotRepoData_ES_7_10 fromRepo(SourceRepo repo) throws IOException {
+        Path file = repo.getSnapshotRepoDataFilePath();
         if (file == null) {
-            throw new IOException("No index file found in " + dir);
+            throw new IOException("No index file found in " + repo.getRepoRootDir());
         }
         return fromRepoFile(file);
     }
