@@ -1,4 +1,4 @@
-package com.rfs;
+package com.rfs.common;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -15,13 +15,9 @@ public class RestClient {
     public RestClient(ConnectionDetails connectionDetails) {
         this.connectionDetails = connectionDetails;
     }
-
-    private String getConnectionString() {
-        return "http://" + connectionDetails.host + ":" + connectionDetails.port;
-    }
     
     public void put(String path, String body) throws Exception {
-        String urlString = getConnectionString() + "/" + path;
+        String urlString = connectionDetails.host + "/" + path;
         
         URL url = new URL(urlString);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();

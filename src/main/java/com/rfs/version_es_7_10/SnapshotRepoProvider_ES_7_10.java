@@ -1,4 +1,4 @@
-package com.rfs;
+package com.rfs.version_es_7_10;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -6,26 +6,28 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class SnapshotRepoDataProvider {
-    private final SnapshotRepoData repoData;
+import com.rfs.common.SnapshotRepo;
 
-    public SnapshotRepoDataProvider(Path dirPath) throws IOException{
-        this.repoData = SnapshotRepoData.fromRepoDir(dirPath);
+public class SnapshotRepoProvider_ES_7_10 implements SnapshotRepo.Provider {
+    private final SnapshotRepoData_ES_7_10 repoData;
+
+    public SnapshotRepoProvider_ES_7_10(Path dirPath) throws IOException{
+        this.repoData = SnapshotRepoData_ES_7_10.fromRepoDir(dirPath);
     }
 
     public Path getSnapshotDirPath() {
         return repoData.filePath.getParent();
     }
 
-    public List<SnapshotRepoData.Index> getIndices() {
+    public List<SnapshotRepo.Index> getIndices() {
         return repoData.indices.entrySet().stream()
-                .map(entry -> SnapshotRepoData.Index.fromRawIndex(entry.getKey(), entry.getValue()))
+                .map(entry -> SnapshotRepoData_ES_7_10.Index.fromRawIndex(entry.getKey(), entry.getValue()))
                 .collect(Collectors.toList());
     }
 
-    public List<SnapshotRepoData.Index> getIndicesInSnapshot(String snapshotName) {
-        List<SnapshotRepoData.Index> matchedIndices = new ArrayList<>();
-        SnapshotRepoData.Snapshot targetSnapshot = repoData.snapshots.stream()
+    public List<SnapshotRepo.Index> getIndicesInSnapshot(String snapshotName) {
+        List<SnapshotRepo.Index> matchedIndices = new ArrayList<>();
+        SnapshotRepoData_ES_7_10.Snapshot targetSnapshot = repoData.snapshots.stream()
             .filter(snapshot -> snapshotName.equals(snapshot.name))
             .findFirst()
             .orElse(null);
@@ -34,7 +36,7 @@ public class SnapshotRepoDataProvider {
             targetSnapshot.indexMetadataLookup.keySet().forEach(indexId -> {
                 repoData.indices.forEach((indexName, rawIndex) -> {
                     if (indexId.equals(rawIndex.id)) {
-                        matchedIndices.add(SnapshotRepoData.Index.fromRawIndex(indexName, rawIndex));
+                        matchedIndices.add(SnapshotRepoData_ES_7_10.Index.fromRawIndex(indexName, rawIndex));
                     }
                 });
             });
@@ -42,12 +44,13 @@ public class SnapshotRepoDataProvider {
         return matchedIndices;
     }
 
-    public List<SnapshotRepoData.Snapshot> getSnapshots() {
-        return repoData.snapshots;
+    public List<SnapshotRepo.Snapshot> getSnapshots() {
+        List<SnapshotRepo.Snapshot> convertedList = new ArrayList<>(repoData.snapshots);
+        return convertedList;
     }
     
     public String getSnapshotId(String snapshotName) {
-        for (SnapshotRepoData.Snapshot snapshot : repoData.snapshots) {
+        for (SnapshotRepoData_ES_7_10.Snapshot snapshot : repoData.snapshots) {
             if (snapshot.name.equals(snapshotName)) {
                 return snapshot.uuid;
             }

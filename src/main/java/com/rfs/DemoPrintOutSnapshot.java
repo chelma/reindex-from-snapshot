@@ -1,39 +1,64 @@
 package com.rfs;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
+
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.store.IndexOutput;
-import org.apache.lucene.store.IOContext;
-import org.apache.lucene.store.NativeFSLockFactory;
 import org.apache.lucene.util.BytesRef;
-import org.elasticsearch.common.blobstore.BlobPath;
-import org.elasticsearch.common.blobstore.BlobContainer;
-import org.elasticsearch.common.blobstore.fs.FsBlobStore;
-import org.elasticsearch.index.mapper.Uid;
-import org.elasticsearch.index.snapshots.blobstore.BlobStoreIndexShardSnapshot;
-import org.elasticsearch.index.snapshots.blobstore.SlicedInputStream;
+
+import com.rfs.common.Uid;
+import com.rfs.version_es_6_8.*;
+import com.rfs.common.GlobalMetadata;
+import com.rfs.common.IndexMetadata;
+import com.rfs.common.ShardMetadata;
+import com.rfs.common.SnapshotMetadata;
+import com.rfs.common.SnapshotRepo;
+import com.rfs.common.SnapshotShardUnpacker;
+import com.rfs.common.ClusterVersion;
+import com.rfs.version_es_7_10.*;
 
 public class DemoPrintOutSnapshot {
 
-    public DemoPrintOutSnapshot() {}
+    public static class Args {
+        @Parameter(names = {"-n", "--snapshot-name"}, description = "The name of the snapshot to read", required = true)
+        public String snapshotName;
+
+        @Parameter(names = {"-d", "--snapshot-dir"}, description = "The absolute path to the snapshot directory", required = true)
+        public String snapshotDirPath;
+
+        @Parameter(names = {"-l", "--lucene-dir"}, description = "The absolute path to the directory where we'll put the Lucene docs", required = true)
+        public String luceneBasePathString;
+
+        @Parameter(names = {"-v", "--source-version"}, description = "Source version", required = true, converter = ClusterVersion.ArgsConverter.class)
+        public ClusterVersion sourceVersion;
+    }
 
     public static void main(String[] args) {
-        // Constants
-        String snapshotName = "global_state_snapshot";
-        String snapshotDirPath = "/Users/chelma/workspace/ElasticSearch/elasticsearch/build/testclusters/runTask-0/repo/snapshots";        
-        String luceneFilesBasePath = "/tmp/lucene_files";
+        Args arguments = new Args();
+        JCommander.newBuilder()
+            .addObject(arguments)
+            .build()
+            .parse(args);
+        
+        String snapshotName = arguments.snapshotName;
+        String snapshotDirPath = arguments.snapshotDirPath;
+        String luceneBasePathString = arguments.luceneBasePathString;
+        ClusterVersion sourceVersion = arguments.sourceVersion;
+
+        if (!((sourceVersion == ClusterVersion.ES_6_8) || (sourceVersion == ClusterVersion.ES_7_10))) {
+            throw new IllegalArgumentException("Unsupported source version: " + sourceVersion);
+        }
 
         try {
             // ==========================================================================================================
@@ -41,12 +66,23 @@ public class DemoPrintOutSnapshot {
             // ==========================================================================================================
             System.out.println("==================================================================");
             System.out.println("Attempting to read Repo data file...");
-            SnapshotRepoDataProvider repoDataProvider = new SnapshotRepoDataProvider(Paths.get(snapshotDirPath));
-            System.out.println("Snapshots: ");
-            repoDataProvider.getSnapshots().forEach(snapshot -> System.out.println(snapshot.name + " - " + snapshot.uuid));
 
-            System.out.println("Indices: ");
-            repoDataProvider.getIndices().forEach(index -> System.out.println(index.name + " - " + index.id));
+            SnapshotRepo.Provider repoDataProvider;
+            if (sourceVersion == ClusterVersion.ES_6_8) {
+                repoDataProvider = new SnapshotRepoProvider_ES_6_8(Paths.get(snapshotDirPath));
+            } else {
+                repoDataProvider = new SnapshotRepoProvider_ES_7_10(Paths.get(snapshotDirPath));
+            }
+
+            System.out.println("--- Snapshots ---");
+            repoDataProvider.getSnapshots().forEach(snapshot -> System.out.println(snapshot.getName() + " - " + snapshot.getId()));
+            
+            for (SnapshotRepo.Snapshot snapshot : repoDataProvider.getSnapshots()) {
+                System.out.println("--- Indices in " + snapshot.getName() + " ---");
+                for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshot.getName())) {
+                    System.out.println(index.getName() + " - " + index.getId());
+                }
+            }
             System.out.println("Repo data read successfully");
 
             // ==========================================================================================================
@@ -60,13 +96,20 @@ public class DemoPrintOutSnapshot {
                 System.out.println("Snapshot not found");
                 return;
             }
-            SnapshotMetadataProvider snapshotMetadataProvider = SnapshotMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
-            System.out.println("Snapshot State: " + snapshotMetadataProvider.getState());
-            System.out.println("Snapshot State Reason: " + snapshotMetadataProvider.getReason());
-            System.out.println("Snapshot Indices: " + snapshotMetadataProvider.getIndices());
-            System.out.println("Snapshot Shards Total: " + snapshotMetadataProvider.getShardsTotal());
-            System.out.println("Snapshot Shards Successful: " + snapshotMetadataProvider.getShardsSuccessful());
-            System.out.println("Snapshot Shards Failed: " + snapshotMetadataProvider.getShardsFailed());
+
+            SnapshotMetadata.Data snapshotMetadata;
+            if (sourceVersion == ClusterVersion.ES_6_8) {
+                snapshotMetadata = new SnapshotMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            } else {
+                snapshotMetadata = new SnapshotMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            }
+
+            System.out.println("Snapshot Metadata State: " + snapshotMetadata.getState());
+            System.out.println("Snapshot Metadata State Reason: " + snapshotMetadata.getReason());
+            System.out.println("Snapshot Metadata Version: " + snapshotMetadata.getVersionId());
+            System.out.println("Snapshot Metadata Indices: " + snapshotMetadata.getIndices());
+            System.out.println("Snapshot Metadata Shards Total: " + snapshotMetadata.getTotalShards());
+            System.out.println("Snapshot Metadata Shards Successful: " + snapshotMetadata.getSuccessfulShards());
 
             // ==========================================================================================================
             // Read the Global Metadata
@@ -74,33 +117,59 @@ public class DemoPrintOutSnapshot {
             System.out.println("==================================================================");
             System.out.println("Attempting to read Global Metadata details...");
 
-            GlobalMetadataProvider globalMetadataProvider = GlobalMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            GlobalMetadata.Data globalMetadata;
+            if (sourceVersion == ClusterVersion.ES_6_8) {
+                globalMetadata = new GlobalMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            } else {
+                globalMetadata = new GlobalMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName);
+            }
 
-            List<String> componentKeys = new ArrayList<>();
-            globalMetadataProvider.getComponentTemplates().fieldNames().forEachRemaining(componentKeys::add);
-            System.out.println("Global Component Templates Keys: " + componentKeys);
+            if (sourceVersion == ClusterVersion.ES_6_8) { 
+                GlobalMetadataData_ES_6_8 globalMetadataES68 = (GlobalMetadataData_ES_6_8) globalMetadata;
 
-            List<String> indexKeys = new ArrayList<>();
-            globalMetadataProvider.getIndexTemplates().fieldNames().forEachRemaining(indexKeys::add);
-            System.out.println("Global Index Templates Keys: " + indexKeys);
+                List<String> templateKeys = new ArrayList<>();
+                globalMetadataES68.getTemplates().fieldNames().forEachRemaining(templateKeys::add);
+                System.out.println("Templates Keys: " + templateKeys);
+            } else if (sourceVersion == ClusterVersion.ES_7_10) {
+                GlobalMetadataData_ES_7_10 globalMetadataES710 = (GlobalMetadataData_ES_7_10) globalMetadata;
+
+                List<String> indexTemplateKeys = new ArrayList<>();
+                globalMetadataES710.getIndexTemplates().fieldNames().forEachRemaining(indexTemplateKeys::add);
+                System.out.println("Index Templates Keys: " + indexTemplateKeys);
+
+                List<String> componentTemplateKeys = new ArrayList<>();
+                globalMetadataES710.getComponentTemplates().fieldNames().forEachRemaining(componentTemplateKeys::add);
+                System.out.println("Component Templates Keys: " + componentTemplateKeys);
+            }
 
             // ==========================================================================================================
             // Read all the Index Metadata
             // ==========================================================================================================
             System.out.println("==================================================================");
             System.out.println("Attempting to read Index Metadata...");
-            Map<String, IndexMetadataProvider> indexMetadatas = new HashMap<>();
-            for (SnapshotRepoData.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
-                System.out.println("Reading Index Metadata for index: " + index.name);
-                IndexMetadataProvider indexMetadataProvider = IndexMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.name);
-                indexMetadatas.put(index.name, indexMetadataProvider);
 
-                System.out.println("Index Id: " + indexMetadataProvider.getId());
-                System.out.println("Index Number of Shards: " + indexMetadataProvider.getNumberOfShards());
-                System.out.println("Index Settings: " + indexMetadataProvider.getSettingsJson().toString());
-                System.out.println("Index Mappings: " + indexMetadataProvider.getMappingsJson().toString());
-                System.out.println("Index Aliases: " + indexMetadataProvider.getAliasesJson().toString());
+            Map<String, IndexMetadata.Data> indexMetadatas = new HashMap<>();
+            if (sourceVersion == ClusterVersion.ES_6_8) {
+                for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
+                    IndexMetadata.Data indexMetadata = new IndexMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());
+                    indexMetadatas.put(index.getName(), indexMetadata);
+                }
+            } else {
+                for (SnapshotRepo.Index index : repoDataProvider.getIndicesInSnapshot(snapshotName)) {
+                    IndexMetadata.Data indexMetadata = new IndexMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, index.getName());
+                    indexMetadatas.put(index.getName(), indexMetadata);
+                }
             }
+
+            for (IndexMetadata.Data indexMetadata : indexMetadatas.values()) {
+                System.out.println("Reading Index Metadata for index: " + indexMetadata.getName());
+                System.out.println("Index Id: " + indexMetadata.getId());
+                System.out.println("Index Number of Shards: " + indexMetadata.getNumberOfShards());
+                System.out.println("Index Settings: " + indexMetadata.getSettings().toString());
+                System.out.println("Index Mappings: " + indexMetadata.getMappings().toString());
+                System.out.println("Index Aliases: " + indexMetadata.getAliases().toString());
+            }
+
             System.out.println("Index Metadata read successfully");
 
             // ==========================================================================================================
@@ -108,18 +177,19 @@ public class DemoPrintOutSnapshot {
             // ==========================================================================================================
             System.out.println("==================================================================");
             System.out.println("Attempting to read Index Shard Metadata...");
-            Map<Integer, ShardMetadataProvider> shardMetadatas = new HashMap<>();
-            for (IndexMetadataProvider indexMetadata : indexMetadatas.values()) {
+            for (IndexMetadata.Data indexMetadata : indexMetadatas.values()) {
                 System.out.println("Reading Index Shard Metadata for index: " + indexMetadata.getName());
                 for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
                     System.out.println("=== Shard ID: " + shardId + " ===");
 
                     // Get the file mapping for the shard
-                    ShardMetadataProvider shardMetadataProvider = ShardMetadataProvider.fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
-                    shardMetadatas.put(shardId, shardMetadataProvider);
-                    for (BlobStoreIndexShardSnapshot.FileInfo fileInfo : shardMetadataProvider.getFiles()) {
-                        System.out.println("File Info: " + fileInfo.toString());
+                    ShardMetadata.Data shardMetadata;
+                    if (sourceVersion == ClusterVersion.ES_6_8) {
+                        shardMetadata = new ShardMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                    } else {
+                        shardMetadata = new ShardMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                     }
+                    System.out.println("Shard Metadata: " + shardMetadata.toString());
                 }
             }
 
@@ -129,50 +199,20 @@ public class DemoPrintOutSnapshot {
             System.out.println("==================================================================");
             System.out.println("Unpacking blob files to disk...");
 
-            NativeFSLockFactory lockFactory = NativeFSLockFactory.INSTANCE;
-
-            for (IndexMetadataProvider indexMetadata : indexMetadatas.values()){
+            for (IndexMetadata.Data indexMetadata : indexMetadatas.values()){
                 for (int shardId = 0; shardId < indexMetadata.getNumberOfShards(); shardId++) {
-                    ShardMetadataProvider shardMetadata = shardMetadatas.get(shardId);
-
-                    // Create the blob container
-                    BlobPath blobPath = new BlobPath().add(shardMetadata.getShardDirPath().toString());            
-                    FsBlobStore blobStore = new FsBlobStore(ElasticsearchConstants.BUFFER_SIZE_IN_BYTES, shardMetadata.getSnapshotDirPath(), false);
-                    BlobContainer container = blobStore.blobContainer(blobPath);
-                    
-                    // Create the directory for the shard's lucene files
-                    Path lucene_dir = Paths.get(luceneFilesBasePath + "/" + indexMetadata.getName() + "/" + shardId);
-                    Files.createDirectories(lucene_dir);
-                    final FSDirectory primaryDirectory = FSDirectory.open(lucene_dir, lockFactory);
-                    
-                    for (BlobStoreIndexShardSnapshot.FileInfo fileInfo : shardMetadata.getFiles()) {
-                        System.out.println("Unpacking - Blob Name: " + fileInfo.name() + ", Lucene Name: " + fileInfo.metadata().name());
-                        IndexOutput indexOutput = primaryDirectory.createOutput(fileInfo.metadata().name(), IOContext.DEFAULT);
-
-                        if (fileInfo.name().startsWith("v__")) {
-                            final BytesRef hash = fileInfo.metadata().hash();
-                            indexOutput.writeBytes(hash.bytes, hash.offset, hash.length);
-                        } else {
-                            try (InputStream stream = new SlicedInputStream(fileInfo.numberOfParts()) {
-                                @Override
-                                protected InputStream openSlice(int slice) throws IOException {
-                                    return container.readBlob(fileInfo.partName(slice));
-                                }
-                            }) {
-                                final byte[] buffer = new byte[Math.toIntExact(Math.min(ElasticsearchConstants.BUFFER_SIZE_IN_BYTES, fileInfo.length()))];
-                                int length;
-                                while ((length = stream.read(buffer)) > 0) {
-                                    indexOutput.writeBytes(buffer, 0, length);
-                                }
-                            }
-                        }
-                        blobStore.close();
-                        indexOutput.close();
+                    ShardMetadata.Data shardMetadata;
+                    if (sourceVersion == ClusterVersion.ES_6_8) {
+                        shardMetadata = new ShardMetadataFactory_ES_6_8().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
+                    } else {
+                        shardMetadata = new ShardMetadataFactory_ES_7_10().fromSnapshotRepoDataProvider(repoDataProvider, snapshotName, indexMetadata.getName(), shardId);
                     }
+                    SnapshotShardUnpacker.unpack(shardMetadata, Paths.get(snapshotDirPath), Paths.get(luceneBasePathString));
 
                     // Now, read the documents back out
                     System.out.println("--- Reading docs in the shard ---");
-                    readDocumentsFromLuceneIndex(lucene_dir.toAbsolutePath().toString());
+                    Path luceneIndexDir = Paths.get(luceneBasePathString + "/" + shardMetadata.getIndexName() + "/" + shardMetadata.getShardId());
+                    readDocumentsFromLuceneIndex(luceneIndexDir);
                 }
 
             }
@@ -181,9 +221,9 @@ public class DemoPrintOutSnapshot {
         }
     }
 
-    private static void readDocumentsFromLuceneIndex(String indexDirectoryPath) throws Exception {
+    private static void readDocumentsFromLuceneIndex(Path indexDirectoryPath) throws Exception {
         // Opening the directory that contains the Lucene index
-        try (FSDirectory directory = FSDirectory.open(Paths.get(indexDirectoryPath));
+        try (FSDirectory directory = FSDirectory.open(indexDirectoryPath);
              IndexReader reader = DirectoryReader.open(directory)) {
 
             // Iterating over all documents in the index
@@ -199,8 +239,8 @@ public class DemoPrintOutSnapshot {
                 }              
 
                 // Iterate over all fields in the document
-                List<org.apache.lucene.index.IndexableField> fields = document.getFields();
-                for (org.apache.lucene.index.IndexableField field : fields) {
+                List<IndexableField> fields = document.getFields();
+                for (IndexableField field : fields) {
                     if ("_source".equals(field.name())){
                         String source_string = source_bytes.utf8ToString();
                         System.out.println("Field name: " + field.name() + ", Field value: " + source_string);
